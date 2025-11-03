@@ -1,0 +1,18 @@
+#----------------------------------------------------------------------
+# defaults file for build-iso
+#
+# This file contains almost all of the variables that determine what
+# actually gets built.  It has a middle priority in between
+# defaults-system which has the lowest priority and defaults-local
+# which has the highest
+#----------------------------------------------------------------------
+
+DISTRO_VERSION="23.5_Workbench"
+
+ARCH="amd64"
+ISO_FLAV="mxworkbench64"
+THEME="mx-workbench"
+
+ENABLE_LOCALES="default"
+
+ISO_SHELL="/bin/zsh"

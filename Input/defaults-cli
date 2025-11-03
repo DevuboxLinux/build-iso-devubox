@@ -1,0 +1,22 @@
+#----------------------------------------------------------------------
+# defaults file for build-iso
+#
+# This file contains almost all of the variables that determine what
+# actually gets built.  It has a middle priority in between
+# defaults-system which has the lowest priority and defaults-local
+# which has the highest
+#----------------------------------------------------------------------
+
+DISTRO_VERSION="23.5_CLI"
+
+ARCH="amd64"
+ISO_FLAV="mxcli64"
+THEME="mxcli"
+
+ENABLE_LOCALES="single"
+
+COMPRESSION_TYPE="xz"
+COMPRESSION_TYPE_CODE="-comp xz -b 262144"
+
+MX_LIVE_BOOT_OPTIONS="quiet splasht= nosplash"
+
