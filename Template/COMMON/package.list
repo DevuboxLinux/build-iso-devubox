@@ -410,6 +410,7 @@ tmux
 traceroute
 tree
 ttf-bitstream-vera
+tzdata-legacy
 ucf
 udev
 udevil
@@ -418,7 +419,9 @@ udisks2
 udisks2-btrfs
 udisks2-lvm2
 uefi-manager
+unace-nonfree
 unalz
+unar
 unpaper
 unrar
 unzip
