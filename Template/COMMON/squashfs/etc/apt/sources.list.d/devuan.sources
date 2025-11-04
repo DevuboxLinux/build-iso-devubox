@@ -1,0 +1,27 @@
+Types: deb
+Enabled: yes
+URIs: http://pkgmaster.devuan.org/merged/
+Suites: excalibur
+Components: main  contrib non-free non-free-firmware
+Signed-By: /usr/share/keyrings/devuan-archive-keyring.gpg
+
+Types: deb
+Enabled: yes
+URIs: http://pkgmaster.devuan.org/merged/
+Suites: excalibur-security
+Components: main  contrib non-free non-free-firmware
+Signed-By: /usr/share/keyrings/devuan-archive-keyring.gpg
+
+Types: deb
+Enabled: no
+URIs: http://pkgmaster.devuan.org/merged/
+Suites: excalibur-backports
+Components: main  contrib non-free non-free-firmware
+Signed-By: /usr/share/keyrings/devuan-archive-keyring.gpg
+
+Types: deb
+Enabled: yes
+URIs: http://pkgmaster.devuan.org/merged/
+Suites: excalibur-updates 
+Components: main contrib non-free non-free-firmware
+Signed-By: /usr/share/keyrings/devuan-archive-keyring.gpg

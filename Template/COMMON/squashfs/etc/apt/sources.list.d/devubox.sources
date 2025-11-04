@@ -1,0 +1,7 @@
+Types: deb
+Enabled: yes
+URIs: http://devuboxlinux.github.io/repo/
+Suites: stable
+Components: main
+Architectures: amd64
+Signed-By: /usr/share/keyrings/devubox-mx-archive-keyring.gpg

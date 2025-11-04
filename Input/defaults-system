@@ -27,24 +27,24 @@
        PS_FORMAT="pid,user,etimes,args"
 
 # this is basic version info. used to make mx-version among other things
-BUG_REPORT_URL="https://mxlinux.org"
-HOME_URL="https://mxlinux.org"
+BUG_REPORT_URL="https://devuboxlinux.github.io"
+HOME_URL="https://devuboxlinux.github.io"
 CODE_NAME="Infinity"
 ASCII_CODE_NAME="Infinity"
 
-RELEASEVERSION="25"
+RELEASEVERSION="MX25"
 ALPHABETARCVERSION="_RC1"
 
 #TEMPLATE
 DISTRO_VERSION="${RELEASEVERSION}_$DEFAULTDESKTOP$ALPHABETARCVERSION"
-DISTRO_NAME="MX"
-RELEASE_DATE="October 26, 2025"
+DISTRO_NAME="Devubox"
+RELEASE_DATE="November 20, 2025"
 
 # system defaults, these end up inside the squash file system mostly
-DEBIAN_RELEASE="trixie"
+DEBIAN_RELEASE="excalibur"
 
 LIVE_USER="demo"
-NEW_HOSTNAME="mx1"
+NEW_HOSTNAME="Devubox-PC"
 
 # kernel
 # standard 64 bit
@@ -58,12 +58,12 @@ LIVE_USER="demo"
 LOCALE="en_US.UTF-8"
 MIRROR="us"
 LOCAL_MIRROR="us"
-MIRROR_URL_TEMPLATE='http://ftp.$LOCAL_MIRROR.debian.org/debian'
-NEW_HOSTNAME="mx1"
+MIRROR_URL_TEMPLATE='http://pkgmaster.devuan.org/merged'
+NEW_HOSTNAME="Devubox-PC"
 TIME_ZONE="America/New_York"
 
 X_TERM_EMULATOR="/usr/bin/xfce4-terminal.wrapper"
-CURSOR_ICON_THEME="/usr/share/icons/DMZ-Black/cursor.theme"
+CURSOR_ICON_THEME="/usr/share/icons/DMZ-White/cursor.theme"
 
 # options for building squashfs
 COMPRESSION_TYPE="zstd"
@@ -81,3 +81,4 @@ NO_SET_HOSTNAME=""
 antiX_LIVE_BOOT_OPTIONS="quiet splash=v disable=lx"
 CORE_LIVE_BOOT_OPTIONS="quiet splash=v disable=lxd"
 MX_LIVE_BOOT_OPTIONS="quiet splasht nosplash"
+Devubox_LIVE_BOOT_OPTIONS="quiet splasht nosplash"
