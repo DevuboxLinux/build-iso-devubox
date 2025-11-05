@@ -62,11 +62,11 @@ jobs:
 
           # Write VNC xstartup to launch XFCE session
           cat > ~/.vnc/xstartup <<'EOF'
-#!/bin/sh
-unset SESSION_MANAGER
-unset DBUS_SESSION_BUS_ADDRESS
-exec dbus-launch --exit-with-session startxfce4
-EOF
+          #!/bin/sh
+          unset SESSION_MANAGER
+          unset DBUS_SESSION_BUS_ADDRESS
+          exec dbus-launch --exit-with-session startxfce4
+          EOF
           chmod +x ~/.vnc/xstartup
 
       - name: Start VNC server
