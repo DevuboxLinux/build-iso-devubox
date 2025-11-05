@@ -95,6 +95,19 @@ jobs:
           sudo dpkg -i cloudflared-linux-amd64.deb codium_1.105.17075_amd64.deb || true
           sudo apt-get install -f -y
 
+      - name: Start tunnel to NoVNC
+        run: |
+          # Start the cloudflared tunnel to expose noVNC (localhost:8080)
+          cloudflared tunnel --url http://localhost:8080 --no-autoupdate > tunnel.log 2>&1 &
+
+          # Give the tunnel a moment to initialize
+          sleep 15
+
+          # Print the public access URL (trycloudflare domain)
+          echo "======== Access URL (NoVNC) ========"
+          grep -Eo "https://[0-9a-zA-Z\.-]+\.trycloudflare.com" tunnel.log || true
+          echo "===================================="
+
       - name: Keep alive until manually stopped
         run: |
           echo "The desktop environment is now running and ready to compile and test your distro graphically."
@@ -117,4 +130,3 @@ jobs:
           echo ""
           echo "And just like that — Devubox-MX is up and running, ready to be published!"
           sleep infinity
-
