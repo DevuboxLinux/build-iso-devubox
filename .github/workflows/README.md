@@ -1,5 +1,5 @@
 ### 🧩 Why This Workflow Uses a GUI
-The ExampleOS ISO build script (forked and customized from an upstream project)
+The Devubox-MX ISO build script (forked and customized from an upstream project)
 requires a text-based interactive interface (TUI) during ISO creation.
 
 Because of this, the GitHub Actions workflow launches a lightweight XFCE desktop
