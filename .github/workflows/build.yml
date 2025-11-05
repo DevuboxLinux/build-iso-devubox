@@ -79,4 +79,14 @@ jobs:
       - name: Keep alive until manually stopped
         run: |
           echo "Desktop is running, ready for compile distro and test them graphically (if there is any bug, just stop the actions at any time)! Stop manually with 'Stop workflow'."
+          echo "To build Devubox-MX ISO, open the Terminal in the start menu, then type"
+          echo "cd /mnt"
+          echo "sudo git clone https://github.com/DevuboxLinux/build-iso-devubox"
+          echo "sudo cd build-iso-devubox"
+          echo "sudo ./build-iso --user-default defaults-Base-sysv"
+          echo "then follow the instructions (if asked for brightness-modified-init, type Y and enter)"
+          echo "then wait, the iso will produced in Remaster/iso-files"
+          echo "to run the ISO, type sudo qemu-system-x86_64 --enable-kvm -m 4096 -cpu host -smp cores=2,sockets=1,threads=1 -net nic -net user -vnc :0 -usb -device usb-tablet -vga virtio  -cdrom  ./Remaster/iso-files/*.iso"
+          echo "then open the tigervnc viewer in start menu, and type 127.0.0.1 as the vnc address, click connect"
+          echo "and BOOM, Devubox-MX is ready to be published"
           sleep infinity
