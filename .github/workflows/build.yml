@@ -1,7 +1,16 @@
-name: Devubox ISO Build Environment (Stable)
+# ============================================================
+# Devubox-MX: install and Runtime Setup
+# This workflow prepares a lightweight desktop (XFCE) with
+# VNC / noVNC and required build tools so the ISO build script
+# (which requires interactive TUI input) can be run manually.
+# The top of your workflow uses a `sleep infinity` step to
+# keep the runner alive for interactive testing.
+# ============================================================
+
+name: Devubox-MX ISO Build Environment (Stable)
 
 on:
-  workflow_dispatch:   # manual start
+  workflow_dispatch:   # Manual start
 
 jobs:
   desktop:
@@ -9,84 +18,103 @@ jobs:
     steps:
       - name: Speed up installs (disable man-db)
         run: |
-         #make it faster
-         sudo rm -f /var/lib/man-db/auto-update
-         sudo sh -c 'echo "path-exclude /usr/share/man/*" > /etc/dpkg/dpkg.cfg.d/01_nodocs'
+          # Make package installs faster by disabling man-db auto update
+          sudo rm -f /var/lib/man-db/auto-update || true
+          sudo sh -c 'echo "path-exclude /usr/share/man/*" > /etc/dpkg/dpkg.cfg.d/01_nodocs'
 
-      - name: Update system and install XFCE + VNC + QEMU + Devubox Build Tools
+      - name: Update system and install XFCE, VNC, QEMU, and build tools
         run: |
-          #update repository
+          # Update package lists
           sudo apt-get update
-          #install desktop environment
-          sudo apt-get install -y --no-install-recommends  xfce4 xfce4-terminal  thunar file-roller thunar-archive-plugin  mousepad xfce4-taskmanager xfce4-screenshooter galculator ristretto tigervnc-standalone-server tigervnc-tools tigervnc-common novnc websockify dbus-x11 x11-utils x11-xserver-utils stress-ng  curl wget unzip
-          #install build tools
-          sudo apt-get install -y qemu-system-x86 tigervnc-viewer virt-manager debootstrap expect squashfs-tools genisoimage xorriso zsync debconf-utils kmod syslinux-utils cpio
-          #clone devubox iso build script
+
+          # Install desktop environment and utilities (no recommended packages)
+          sudo apt-get install -y --no-install-recommends \
+            xfce4 xfce4-terminal thunar file-roller thunar-archive-plugin \
+            mousepad xfce4-taskmanager xfce4-screenshooter galculator ristretto \
+            tigervnc-standalone-server tigervnc-tools tigervnc-common novnc websockify \
+            dbus-x11 x11-utils x11-xserver-utils stress-ng curl wget unzip
+
+          # Install build tools and QEMU
+          sudo apt-get install -y \
+            qemu-system-x86 tigervnc-viewer virt-manager debootstrap expect \
+            squashfs-tools genisoimage xorriso zsync debconf-utils kmod \
+            syslinux-utils cpio
+
+          # Clone Devubox-MX ISO build script (into the workspace)
           git clone https://github.com/DevuboxLinux/build-iso-devubox
-          #download necessary deb files
+
+          # Download required .deb files (Devuan packages used by the build)
           wget "https://pkgmaster.devuan.org/devuan/pool/main/d/debootstrap/debootstrap_1.0.141devuan1_all.deb"
           wget "https://pkgmaster.devuan.org/devuan/pool/main/d/devuan-keyring/devuan-keyring_2025.08.09_all.deb"
-          #install necessary deb files
-          sudo dpkg -i ./de*.deb
-          #install remaining depedencies
-          sudo apt install -f
 
-      - name: Setup VNC password
+          # Install downloaded .debs, then fix/install missing deps
+          sudo dpkg -i ./debootstrap_1.0.141devuan1_all.deb ./devuan-keyring_2025.08.09_all.deb || true
+          sudo apt-get install -f -y
+
+      - name: Setup VNC password and xstartup
         run: |
-          #create vnc folder
+          # Create .vnc directory
           mkdir -p ~/.vnc
-          #vnc password
-          echo "mbeek" | vncpasswd -f > ~/.vnc/passwd
+
+          # Create VNC password ("live")
+          echo "live" | vncpasswd -f > ~/.vnc/passwd
           chmod 600 ~/.vnc/passwd
-          #vnc startup script
+
+          # Write VNC xstartup to launch XFCE session
           cat > ~/.vnc/xstartup <<'EOF'
-          #!/bin/sh
-          unset SESSION_MANAGER
-          unset DBUS_SESSION_BUS_ADDRESS
-          exec dbus-launch --exit-with-session startxfce4
-          EOF
+#!/bin/sh
+unset SESSION_MANAGER
+unset DBUS_SESSION_BUS_ADDRESS
+exec dbus-launch --exit-with-session startxfce4
+EOF
           chmod +x ~/.vnc/xstartup
 
       - name: Start VNC server
         run: |
-          #start the vnc
+          # Start VNC on display :1
           vncserver :1 -geometry 1366x768 -depth 24
 
-      - name: Start NoVNC (websockify)
+      - name: Start noVNC (websockify)
         run: |
-          #start the web server
+          # Serve the noVNC web client and proxy to VNC display :1 (5901)
+          # Run in background so the workflow can continue.
           websockify --web /usr/share/novnc/ 8080 localhost:5901 &
+
+          # Give noVNC a moment to start
           sleep 5
 
-      - name: Install Cloudflared and VSCodium
+      - name: Install cloudflared and VSCodium
         run: |
-          #download cloudflared to accessing vnc and vscodium to code with it.
+          # Download cloudflared (to expose local services if needed)
           wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
-          wget https://github.com/VSCodium/vscodium/releases/download/1.105.17075/codium_1.105.17075_amd64.deb
-          #install them
-          sudo dpkg -i cloudflared-linux-amd64.deb
-          sudo dpkg -i codium_1.105.17075_amd64.deb
 
-      - name: Start tunnel to NoVNC
-        run: |
-          #start the cloudflared
-          cloudflared tunnel --url http://localhost:8080 --no-autoupdate > tunnel.log 2>&1 &
-          sleep 15
-          echo "======== Access URL (NoVNC) ========"
-          grep -Eo "https://[0-9a-zA-Z\.-]+\.trycloudflare.com" tunnel.log || true
-          echo "===================================="
+          # Download a VSCodium build for remote editing
+          wget https://github.com/VSCodium/vscodium/releases/download/1.105.17075/codium_1.105.17075_amd64.deb
+
+          # Install them (ignore dpkg errors, then fix deps)
+          sudo dpkg -i cloudflared-linux-amd64.deb codium_1.105.17075_amd64.deb || true
+          sudo apt-get install -f -y
 
       - name: Keep alive until manually stopped
         run: |
-          echo "Desktop is running, ready for compile distro and test them graphically (if there is any bug, just stop the actions at any time)! Stop manually with 'Stop workflow'."
-          echo "To build Devubox-MX ISO, open the Terminal in the start menu, then type"
+          echo "The desktop environment is now running and ready to compile and test your distro graphically."
+          echo "If you encounter any issues, you can stop this workflow at any time using 'Stop workflow'."
+          echo ""
+          echo "To build the Devubox-MX ISO, open the Terminal from the Start menu and enter the following commands:"
+          echo ""
           echo "cd /mnt"
           echo "sudo git clone https://github.com/DevuboxLinux/build-iso-devubox"
           echo "sudo cd build-iso-devubox"
           echo "sudo ./build-iso --user-default defaults-Base-sysv"
-          echo "then follow the instructions (if asked for brightness-modified-init, type Y and enter)"
-          echo "then wait, the iso will produced in Remaster/iso-files"
-          echo "to run the ISO, type sudo qemu-system-x86_64 --enable-kvm -m 4096 -cpu host -smp cores=2,sockets=1,threads=1 -net nic -net user -vnc :0 -usb -device usb-tablet -vga virtio  -cdrom  ./Remaster/iso-files/*.iso"
-          echo "then open the tigervnc viewer in start menu, and type 127.0.0.1 as the vnc address, click connect"
-          echo "and BOOM, Devubox-MX is ready to be published"
+          echo ""
+          echo "Follow the on-screen instructions in the terminal."
+          echo "When the build is complete, the ISO will be available in 'Remaster/iso-files'."
+          echo ""
+          echo "To test the ISO, run:"
+          echo "sudo qemu-system-x86_64 --enable-kvm -m 4096 -cpu host -smp cores=2,sockets=1,threads=1 -net nic -net user -vnc :0 -usb -device usb-tablet -vga virtio -cdrom ./Remaster/iso-files/*.iso"
+          echo ""
+          echo "Next, open TigerVNC Viewer from the Start menu and connect to '127.0.0.1'."
+          echo ""
+          echo "And just like that — Devubox-MX is up and running, ready to be published!"
           sleep infinity
+
