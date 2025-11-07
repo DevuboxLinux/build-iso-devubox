@@ -1,6 +1,7 @@
 firmware-ipw2x00 
 plymouth-modified-init
 brightness-modified-init
+tasksel
 cups
 printer-driver-cups-pdf
 grub-files-mx

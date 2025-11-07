@@ -80,6 +80,7 @@ czkawka-gui
 davfs2
 dconf-cli
 dconf-editor
+deb-get
 deb-installer
 debootstrap
 default-jre
