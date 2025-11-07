@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<actions>
+<action>
+	<icon>utilities-terminal</icon>
+	<name>Open Terminal Here</name>
+	<submenu></submenu>
+	<unique-id>1388590880939619-1</unique-id>
+	<command>exo-open --working-directory %f --launch TerminalEmulator</command>
+	<description>Launch terminal emulator here</description>
+	<range></range>
+	<patterns>*</patterns>
+	<startup-notify/>
+	<directories/>
+</action>
+<action>
+	<icon>utilities-terminal_su</icon>
+	<name>Open Root Terminal Here</name>
+	<submenu></submenu>
+	<unique-id>1388590880932619-1</unique-id>
+	<command>exo-open --working-directory %d --launch TerminalEmulator  &apos;sudo bash&apos;</command>
+	<description>Open Root Terminal Here</description>
+	<range></range>
+	<patterns>*</patterns>
+	<startup-notify/>
+	<directories/>
+</action>
+<action>
+	<icon>folder-root</icon>
+	<name>Open Thunar As Root</name>
+	<submenu></submenu>
+	<unique-id>1391443434179984-1</unique-id>
+	<command>pkexec thunar %f</command>
+	<description>Open Thunar As Root</description>
+	<range></range>
+	<patterns>*</patterns>
+	<directories/>
+</action>
+<action>
+	<icon>accessories-text-editor</icon>
+	<name>Edit As Root</name>
+	<submenu></submenu>
+	<unique-id>1651496763999307-1</unique-id>
+	<command>pkexec mousepad %f</command>
+	<description>Edit As Root</description>
+	<range></range>
+	<patterns>*</patterns>
+	<other-files/>
+	<text-files/>
+</action>
+<action>
+	<icon>web-browser</icon>
+	<name>Open with Web Browser</name>
+	<submenu></submenu>
+	<unique-id>1681543596686838-1</unique-id>
+	<command>exo-open --launch WebBrowser %f</command>
+	<description>Open with Web Browser</description>
+	<range>*</range>
+	<patterns>*.html;*.mhtml;*.xhtml;*.htm</patterns>
+	<text-files/>
+</action>
+<action>
+	<icon>mpv</icon>
+	<name>Open with mpv</name>
+	<submenu></submenu>
+	<unique-id>1651496763509307-1</unique-id>
+	<command>mpv --player-operation-mode=pseudo-gui -- %F</command>
+	<description>Play movies and songs</description>
+	<range></range>
+	<patterns>*</patterns>
+	<audio-files/>
+	<video-files/>
+</action>
+<action>
+	<icon>Thunar</icon>
+	<name>Bulk Rename</name>
+	<submenu></submenu>
+	<unique-id>1391443434178888-1</unique-id>
+	<command>thunar -B %F</command>
+	<description>Rename Multiple Files</description>
+	<range></range>
+	<patterns>*</patterns>
+	<audio-files/>
+	<image-files/>
+	<other-files/>
+	<text-files/>
+	<video-files/>
+</action>
+<action>
+	<icon>org.gnome.baobab</icon>
+	<name>Disk Usage</name>
+	<submenu></submenu>
+	<unique-id>1391015829776666-1</unique-id>
+	<command>baobab %f</command>
+	<description>Check folder sizes and available disk space</description>
+	<range></range>
+	<patterns>*</patterns>
+	<directories/>
+	<audio-files/>
+	<image-files/>
+	<other-files/>
+	<text-files/>
+	<video-files/>
+</action>
+<action>
+	<icon>catfish</icon>
+	<name>Search In This Folder</name>
+	<submenu></submenu>
+	<unique-id>1391015829771111-1</unique-id>
+	<command>catfish --path=%f</command>
+	<description>Search For Files Within A Folder</description>
+	<range></range>
+	<patterns>*</patterns>
+	<directories/>
+</action>
+<action>
+	<icon>edit-copy</icon>
+	<name>Create A Backup Copy</name>
+	<submenu></submenu>
+	<unique-id>1651494541030884-4</unique-id>
+	<command>cp --backup=t %f %f.backup</command>
+	<description>Create A Backup Copy Of A File</description>
+	<range></range>
+	<patterns>*</patterns>
+	<audio-files/>
+	<image-files/>
+	<other-files/>
+	<text-files/>
+	<video-files/>
+</action>
+<action>
+	<icon>application-x-ms-dos-executable</icon>
+	<name>Make file executable</name>
+	<submenu></submenu>
+	<unique-id>1651494081384122-1</unique-id>
+	<command>chmod +x %f</command>
+	<description>Chmod +x a file</description>
+	<range></range>
+	<patterns>*</patterns>
+	<other-files/>
+	<text-files/>
+</action>
+<action>
+	<icon>org.gtkhash.gtkhash</icon>
+	<name>Hash Files</name>
+	<submenu></submenu>
+	<unique-id>1651358104641950-1</unique-id>
+	<command>gtkhash %F</command>
+	<description>Calculate message digests or checksums</description>
+	<range></range>
+	<patterns>*</patterns>
+	<audio-files/>
+	<image-files/>
+	<other-files/>
+	<text-files/>
+	<video-files/>
+</action>
+<action>
+	<icon>deb-installer</icon>
+	<name>Install Deb Files</name>
+	<submenu></submenu>
+	<unique-id>1520126333907393-1</unique-id>
+	<command>deb-installer %f</command>
+	<description>Install software packages</description>
+	<range></range>
+	<patterns>*.deb</patterns>
+	<other-files/>
+</action>
+<action>
+	<icon>mediainfo</icon>
+	<name>Mediainfo</name>
+	<submenu></submenu>
+	<unique-id>1391015829777777-1</unique-id>
+	<command>mediainfo-gui %f</command>
+	<description>Supplies technical and tag information about a video or audio file</description>
+	<range></range>
+	<patterns>*</patterns>
+	<audio-files/>
+	<video-files/>
+</action>
+<action>
+	<icon>org.gnome.Meld</icon>
+	<name>Compare</name>
+	<submenu></submenu>
+	<unique-id>1674813525424609-4</unique-id>
+	<command>meld %F</command>
+	<description>Compare and merge your files</description>
+	<range>*</range>
+	<patterns>*</patterns>
+	<directories/>
+	<other-files/>
+	<text-files/>
+</action>
+<action>
+	<icon>org.gnome.GHex</icon>
+	<name>Hex Files</name>
+	<submenu></submenu>
+	<unique-id>1652627568973643-1</unique-id>
+	<command>ghex %f</command>
+	<description>Inspect and edit binary files</description>
+	<range></range>
+	<patterns>*</patterns>
+	<audio-files/>
+	<image-files/>
+	<other-files/>
+	<text-files/>
+	<video-files/>
+</action>
+<action>
+	<icon>application-default-icon</icon>
+	<name>Execute shell script</name>
+	<submenu></submenu>
+	<unique-id>1687335317152457-1</unique-id>
+	<command>exo-open --launch TerminalEmulator %f</command>
+	<description>Execute shell script</description>
+	<range>*</range>
+	<patterns>*.sh</patterns>
+	<other-files/>
+</action>
+</actions>

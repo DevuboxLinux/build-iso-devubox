@@ -1,0 +1,10 @@
+<?xml version="1.1" encoding="UTF-8"?>
+
+<channel name="xfce4-terminal" version="1.0">
+  <property name="font-use-system" type="bool" value="true"/>
+  <property name="background-mode" type="string" value="TERMINAL_BACKGROUND_TRANSPARENT"/>
+  <property name="background-darkness" type="double" value="0.75"/>
+  <property name="misc-toolbar-default" type="bool" value="true"/>
+  <property name="font-name" type="string" value="Ubuntu Mono 12"/>
+  <property name="misc-default-geometry" type="string" value="90x30"/>
+</channel>
