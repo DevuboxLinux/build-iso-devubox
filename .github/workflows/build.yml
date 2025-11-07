@@ -18,12 +18,14 @@ jobs:
     steps:
       - name: Speed up installs (disable man-db)
         run: |
+          sleep 1
           # Make package installs faster by disabling man-db auto update
           sudo rm -f /var/lib/man-db/auto-update || true
           sudo sh -c 'echo "path-exclude /usr/share/man/*" > /etc/dpkg/dpkg.cfg.d/01_nodocs'
 
       - name: Update system and install XFCE, VNC, QEMU, and build tools
         run: |
+          sleep 1
           # Update package lists
           sudo apt-get update
 
@@ -53,6 +55,7 @@ jobs:
 
       - name: Setup VNC password and xstartup
         run: |
+          sleep 1
           # Create .vnc directory
           mkdir -p ~/.vnc
 
@@ -71,11 +74,13 @@ jobs:
 
       - name: Start VNC server
         run: |
+          sleep 1
           # Start VNC on display :1
           vncserver :1 -geometry 1366x768 -depth 24
 
       - name: Start noVNC (websockify)
         run: |
+          sleep 1
           # Serve the noVNC web client and proxy to VNC display :1 (5901)
           # Run in background so the workflow can continue.
           websockify --web /usr/share/novnc/ 8080 localhost:5901 &
@@ -85,6 +90,7 @@ jobs:
 
       - name: Install cloudflared and VSCodium
         run: |
+          sleep 1
           # Download cloudflared (to expose local services if needed)
           wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
 
@@ -97,6 +103,7 @@ jobs:
 
       - name: Start tunnel to NoVNC
         run: |
+          sleep 1
           # Start the cloudflared tunnel to expose noVNC (localhost:8080)
           cloudflared tunnel --url http://localhost:8080 --no-autoupdate > tunnel.log 2>&1 &
 
@@ -110,6 +117,7 @@ jobs:
 
       - name: Keep alive until manually stopped
         run: |
+          sleep 1
           echo "The desktop environment is now running and ready to compile and test your distro graphically."
           echo "If you encounter any issues, you can stop this workflow at any time using 'Stop workflow'."
           echo ""
