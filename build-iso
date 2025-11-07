@@ -1028,7 +1028,7 @@ do_stage_4() {
         && do_part 11 "Remove some packages"; then
         gather_say remove "Remove $(pqn %n) package%s"
         # shellcheck disable=SC2046
-        apt-get purge $(gather "remove") $apt_yes --allow-remove-essential
+        apt-get purge $(gather "remove") $apt_yes --allow-remove-essential --auto-remove
         end_part_strict
     fi
 
