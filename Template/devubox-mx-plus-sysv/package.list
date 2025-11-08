@@ -116,7 +116,6 @@ ddcutil
 ddgr
 ddrescueview
 ddrutility
-debconf-i18n
 deb-get
 deb-installer
 debootstrap
@@ -138,7 +137,7 @@ doublecmd-gtk
 drawing
 driveutility
 droopy-mx
-dstat
+pcp
 duf
 duff
 dump
@@ -170,7 +169,6 @@ featherpad
 feh
 file-roller
 filezilla
-fio
 firetools
 firmware-cavium
 flac
@@ -566,7 +564,6 @@ rclone-browser
 rdesktop
 rdfind
 rdiff-backup
-readline-common
 recordmydesktop
 rednotebook
 reglookup
@@ -595,7 +592,6 @@ seahorse
 secure-delete
 selinux-policy-default
 sendemail
-sensible-utils
 simple-scan
 simplescreenrecorder
 skippy-xd
@@ -641,7 +637,6 @@ thunar-shares-plugin
 thunar-volman
 thunderbird
 tigervnc-viewer
-time
 timeshift
 tint2
 tlpui
