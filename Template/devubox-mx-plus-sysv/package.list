@@ -131,7 +131,6 @@ di
 digitemp
 disktype
 dislocker
-docker-ce
 docker-compose
 docker.io
 dosbox
@@ -600,7 +599,6 @@ sensible-utils
 simple-scan
 simplescreenrecorder
 skippy-xd
-smbios-utils
 smplayer
 sonnet6-plugins
 sound-theme-freedesktop
