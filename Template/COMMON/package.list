@@ -24,6 +24,8 @@ beep
 bind9-dnsutils
 bind9-host
 binutils
+bluetooth
+bluez-cups
 bluez-firmware
 bluez-obexd
 brightnessctl
@@ -158,6 +160,7 @@ gnome-icon-theme
 gnupg2
 gnu-which
 gocr
+gpart
 gpm
 groff
 groff-base
@@ -174,6 +177,7 @@ gufw
 haveged
 hdparm
 hexedit
+hfsprogs
 hplip
 htop
 hunspell-en-gb
@@ -194,8 +198,10 @@ intel-microcode
 inxi
 ipheth-utils
 iproute2
+iputils-arping
 iputils-clockdiff
 iputils-ping
+iputils-tracepath
 isa-support
 iso-codes
 isomount
@@ -398,9 +404,11 @@ tcpd
 tdb-tools
 telnet
 testdisk
+time
 tlp
 tmux
 traceroute
+tree
 ttf-bitstream-vera
 tzdata-legacy
 ucf
