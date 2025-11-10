@@ -1,4 +1,5 @@
 7zip-standalone
+ack
 advert-block-antix
 adwaita-icon-theme-legacy
 adwaita-qt
@@ -820,6 +821,7 @@ zile
 zim
 zint
 zint-qt
+zoxide
 zsh
 zsh-autosuggestions
 zsh-syntax-highlighting
