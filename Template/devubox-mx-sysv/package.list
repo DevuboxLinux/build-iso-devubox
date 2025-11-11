@@ -1,4 +1,6 @@
+7zip-rar
 7zip-standalone
+abook
 ack
 advert-block-antix
 adwaita-icon-theme-legacy
@@ -48,6 +50,7 @@ boot-info
 boot-repair
 boot-sav
 boot-sav-extra
+borgbackup
 brltty
 bsd-mailx
 btop
@@ -61,6 +64,7 @@ can-utils
 captain
 carburetor
 casync
+catdoc
 catfish
 cava
 cbatticon
@@ -95,6 +99,7 @@ claws-mail-tnef-parser
 claws-mail-tools
 claws-mail-vcalendar-plugin
 clex
+clinfo
 clonezilla
 cmatrix
 cmospwd
@@ -141,6 +146,7 @@ d-feet
 dh-python
 di
 digitemp
+discount
 disktype
 dislocker
 dosbox
@@ -168,6 +174,7 @@ espeakup
 evemu-tools
 evince
 evtest
+exfalso
 exiv2
 exo-utils
 expect
@@ -209,8 +216,10 @@ fonts-vlgothic
 fonts-wqy-microhei
 fonts-wqy-zenhei
 foomatic-db-engine
+foremost
 fping
 freefilesync
+frozen-bubble
 fsarchiver
 fsearch
 fstransform
@@ -230,6 +239,7 @@ geany-plugin-overview
 geany-plugins
 geany-plugin-webhelper
 geoip-bin
+gftp
 gftp-text
 ghex
 gigolo
@@ -280,6 +290,7 @@ gnome-weather
 gnupg-agent
 gobby
 gobi-loader
+go-l2tp
 goldendict
 goodvibes
 goverlay
@@ -414,12 +425,14 @@ lightdm-gtk-greeter
 lightdm-gtk-greeter-mx
 lightdm-gtk-greeter-settings
 lightdm-modified-init
+link-grammar-dictionaries-en
 links2
 linssid
 linux-cpupower
 linux-headers-liquorix-amd64
 linux-image-liquorix-amd64
 localsend
+lp-solve
 lrzsz
 lsb-base
 lshw-gtk
@@ -437,7 +450,9 @@ maxautoclicker
 mcabber
 mediainfo
 mediainfo-gui
+media-player-info
 meld
+melt
 menulibre
 mesa-vulkan-drivers
 metadata-cleaner
@@ -457,8 +472,11 @@ mousetweaks
 mpt-status
 mpv
 msmtp
+mtd-utils
 mtpaint
 mugshot
+multiload-ng-common
+multiload-ng-systray
 multitail
 mumble
 mx23-artwork
@@ -509,6 +527,7 @@ network-manager-pptp-gnome
 network-manager-sstp-gnome
 network-manager-strongswan
 newsboat
+nfacct
 nitrogen
 nmon
 node-clipboard
@@ -521,6 +540,7 @@ obs-plugins
 obs-studio
 onboard
 onboard-data
+onioncircuits
 onionshare
 openbox
 openipmi
@@ -539,6 +559,7 @@ pacpl
 pacstall
 pahole
 pamu2fcfg
+paperkey
 papirus-mxblue
 par2
 parallel
@@ -588,12 +609,15 @@ powersupply-gtk
 pppoe
 procmail
 progress
+proj-bin
 projectm-data
 psensor
 pssh
 pulseaudio-utils
 pulsemixer
 putty
+pyqt5-dev-tools
+pyqt6-dev-tools
 python3-all
 python3-defer
 python3-enchant
@@ -733,6 +757,7 @@ toybox
 transmission-cli
 transmission-common
 transmission-qt
+transmission-remote-gtk
 trash-cli
 ttf-mscorefonts-installer
 ttyrec
@@ -743,7 +768,7 @@ udpcast
 uget
 uidmap
 unace
-unetbootin
+unetbotin
 unhide
 ure
 usermode
