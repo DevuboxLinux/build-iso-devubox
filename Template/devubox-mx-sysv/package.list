@@ -44,6 +44,10 @@ bluez-tools
 bombadillo
 bonnie++
 bookletimposer
+boot-info
+boot-repair
+boot-sav
+boot-sav-extra
 brltty
 bsd-mailx
 btop
@@ -341,6 +345,8 @@ indicator-keylock
 inkscape
 input-utils
 intltool
+io.elementary.settings
+io.elementary.settings.network
 ioping
 iotop
 iozone3
@@ -353,6 +359,7 @@ irssi
 irssi-plugin-otr
 irssi-plugin-xmpp
 isolinux
+isomaster
 java-common
 jgmenu
 jhead
@@ -439,6 +446,7 @@ milkytracker
 minder
 minicom
 minisat
+minitube
 mixxx
 moc
 modem-manager-gui
@@ -524,6 +532,7 @@ ophcrack
 ophcrack-cli
 orage
 osmo
+os-uninstaller
 otpclient
 packagekit-command-not-found
 pacpl
@@ -636,6 +645,7 @@ remmina
 remmina-plugin-exec
 remmina-plugin-spice
 rename
+rescuezilla
 rhash
 riseup-vpn
 ristretto
@@ -674,6 +684,7 @@ ssh
 ssh-askpass
 ssh-askpass-gnome
 ssss
+stacer
 stoken
 strawberry
 streamlink
@@ -690,6 +701,7 @@ sysbench
 sysfsutils
 system-config-printer
 system-config-printer-udev
+system-monitoring-center
 tango-icon-theme
 task-laptop
 taskwarrior
@@ -733,6 +745,7 @@ udpcast
 uget
 uidmap
 unace
+unetbotin
 unhide
 ure
 usermode
@@ -766,6 +779,8 @@ wipe
 wireguard-tools
 wmalauncher
 wodim
+woeusb
+woeusb-ng
 wpagui
 wxhexeditor
 x11vnc
