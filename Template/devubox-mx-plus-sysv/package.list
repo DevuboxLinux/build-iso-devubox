@@ -13,6 +13,7 @@ alsa-topology-conf
 alsa-ucm-conf
 android-file-transfer
 antimicro
+aom-tools
 apart-gtk
 aptitude
 aptitude-common
@@ -47,6 +48,7 @@ blueman
 bluez
 bluez-test-tools
 bluez-tools
+bmon
 bombadillo
 bonnie++
 bookletimposer
@@ -76,6 +78,7 @@ cbatticon
 cdparanoia
 celluloid
 ceni
+chafa
 cherrytree
 chntpw
 chromium-bsu
@@ -146,6 +149,7 @@ deb-get
 deb-installer
 debootstrap
 default-jre
+deja-dup
 detox
 devscripts
 devubox-goodies
@@ -197,6 +201,7 @@ ext3grep
 ext4magic
 f3
 faketime
+fancontrol
 fatresize
 fbi
 fbreader
@@ -206,6 +211,7 @@ fdupes
 featherpad
 feh
 fetchmail
+ffmpegthumbnailer
 figlet
 file-roller
 filezilla
@@ -218,11 +224,16 @@ flashrom
 flatpak
 foliate
 font-manager
+fonts-clear-sans
 fonts-comic-neue
 fonts-ebgaramond
 fonts-ecolier-court
 fonts-ecolier-lignes-court
+fonts-fork-awesome
+fonts-hack
 fonts-linex
+fonts-mathjax
+fonts-quicksand
 fonts-recommended
 fonts-roboto-slab
 fonts-sil-andika
@@ -233,6 +244,7 @@ fonts-wqy-zenhei
 foomatic-db-engine
 foremost
 fping
+freeaptx-utils
 freefilesync
 freetuxtv
 frei0r-plugins
@@ -256,6 +268,7 @@ geany-plugin-overview
 geany-plugins
 geany-plugin-webhelper
 geoip-bin
+gexec
 gftp
 gftp-text
 ghex
@@ -314,6 +327,7 @@ goodvibes
 goverlay
 gparted
 gpick
+gpicview
 gpodder
 gprename
 gpsd
@@ -366,6 +380,8 @@ hwloc
 hyperv-daemons
 hypnotix
 iagno
+iamerican
+ibritish
 icedax
 icmpinfo
 icoutils
@@ -374,6 +390,8 @@ iftop
 imagemagick
 indicator-keylock
 inkscape
+inkscape-open-symbols
+inotify-tools
 input-utils
 intltool
 io.elementary.settings
@@ -406,12 +424,14 @@ kid3-qt
 kleopatra
 kristall
 ksnip
+l3afpad
 lame
 lazpaint-qt5
 lbreakout2
 lbzip2
 ldap-utils
 lftp
+libavif-bin
 libavif-gdk-pixbuf
 libc6:i386
 libcanberra-gstreamer
@@ -485,6 +505,8 @@ menulibre
 mesa-vulkan-drivers
 metadata-cleaner
 meteo-qt
+mhwaveedit
+micro
 milkytracker
 minder
 minicom
@@ -497,8 +519,10 @@ moreutils
 mosh
 mousepad
 mousetweaks
+mpg321
 mpt-status
 mpv
+mpv-mpris
 msmtp
 mtd-utils
 mtpaint
@@ -542,6 +566,7 @@ neovim
 neovim-qt
 netcat-openbsd
 netdiscover
+nethogs
 netsurf-fb
 netsurf-gtk
 netwag
@@ -558,6 +583,7 @@ newsboat
 nfacct
 nitrogen
 nmon
+nnn
 node-clipboard
 node-prismjs
 nomacs
@@ -566,6 +592,7 @@ nvidia-detect
 obmenu-generator
 obs-plugins
 obs-studio
+odt2txt
 onboard
 onboard-data
 onioncircuits
@@ -683,6 +710,8 @@ qtpass
 qtqr
 quadrapassel
 quaternion
+quodlibet
+qv4l2
 radio
 ranger
 rawtherapee
@@ -694,10 +723,12 @@ rdiff-backup
 recordmydesktop
 rednotebook
 reglookup
+remind
 remmina
 remmina-plugin-exec
 remmina-plugin-spice
 rename
+renameutils
 rescuezilla
 rhash
 riseup-vpn
@@ -706,8 +737,10 @@ rkhunter
 rmlint-gui
 rng-tools5
 rofi
+rtmpdump
 rtorrent
 rubberband-ladspa
+rxvt-unicode
 safecopy
 samdump2
 sane-airscan
@@ -717,6 +750,7 @@ scdaemon
 schism
 scrcpy
 screen
+screenfetch
 screenkey
 scrounge-ntfs
 seahorse
@@ -742,10 +776,12 @@ stacer
 stoken
 strawberry
 streamlink
+streamtuner2
 stress
 stressapptest
 stress-ng
 subversion
+suckless-tools
 swell-foop
 swh-plugins
 switcheroo-control
@@ -757,6 +793,7 @@ sysfsutils
 system-config-printer
 system-config-printer-udev
 system-monitoring-center
+sysv-rc-conf
 tango-icon-theme
 task-laptop
 taskwarrior
@@ -765,6 +802,7 @@ tcpflow
 terminator
 tesseract-ocr
 tgt
+thinkfan
 thunar
 thunar-archive-plugin
 thunar-data
@@ -776,6 +814,7 @@ thunar-shares-plugin
 thunar-vcs-plugin
 thunar-volman
 thunderbird
+tig
 tigervnc-viewer
 timeshift
 tin
@@ -793,10 +832,12 @@ transmission-qt
 transmission-remote-gtk
 trash-cli
 ttf-mscorefonts-installer
+tty-clock
 ttyrec
 tumbler
 tumbler-common
 tumbler-plugins-extra
+typecatcher
 udpcast
 uget
 uidmap
@@ -804,8 +845,10 @@ unace
 unetbootin
 unhide
 ure
+usbtop
 usermode
 user-setup
+v4l-utils
 variety
 vcdimager
 ventoy
@@ -825,12 +868,15 @@ vlc-plugin-fluidsynth
 vlc-plugin-svg
 vmfs-tools
 volumeicon-alsa
+vpx-tools
 w3m
 warpinator
 wavemon
 webapp-manager
 webcamoid
+webp
 webp-pixbuf-loader
+wget2
 wimtools
 wipe
 wireguard-tools
@@ -839,8 +885,10 @@ wmalauncher
 wodim
 woeusb
 woeusb-ng
+wordgrinder
 wpagui
 wxhexeditor
+wyrd
 x11vnc
 xarchiver
 xbacklight
@@ -881,6 +929,7 @@ xserver-xorg-video-trident
 xsettingsd
 xterm
 xutils-dev
+xxkb
 yasr
 yelp
 youtubedl-gui
