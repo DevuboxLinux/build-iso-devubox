@@ -40,7 +40,7 @@ jobs:
           sudo apt-get install -y \
             qemu-system-x86 tigervnc-viewer virt-manager debootstrap expect \
             squashfs-tools genisoimage xorriso zsync debconf-utils kmod \
-            syslinux-utils cpio
+            syslinux-utils cpio filezilla
 
           # Clone Devubox-MX ISO build script (into the workspace)
           git clone https://github.com/DevuboxLinux/build-iso-devubox
