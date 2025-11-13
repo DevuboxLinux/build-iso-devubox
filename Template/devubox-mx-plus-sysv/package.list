@@ -13,6 +13,7 @@ alsa-topology-conf
 alsa-ucm-conf
 android-file-transfer
 antimicro
+apart-gtk
 aptitude
 aptitude-common
 aptkit
@@ -800,7 +801,7 @@ udpcast
 uget
 uidmap
 unace
-unetbotin
+unetbootin
 unhide
 ure
 usermode
