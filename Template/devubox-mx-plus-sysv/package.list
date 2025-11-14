@@ -3,6 +3,7 @@
 abiword
 abook
 ack
+adapta-gtk-theme
 advert-block-antix
 adwaita-icon-theme-legacy
 adwaita-qt
@@ -20,6 +21,7 @@ aptitude-common
 aptkit
 arandr
 archivemount
+arc-theme
 arpwatch
 aspell
 aspell-en
@@ -41,6 +43,7 @@ bat
 bcache-tools
 bind9-utils
 binwalk
+blackbird-gtk-theme
 blanket
 bleachbit
 blender
@@ -61,6 +64,8 @@ brltty
 bsd-mailx
 btop
 bulky
+bunsen-papirus-icon-theme
+bunsen-themes
 caca-utils
 ca-certificates-java
 caja-eiciel
@@ -75,6 +80,8 @@ catdoc
 catfish
 cava
 cbatticon
+cbpp-icon-theme
+cbpp-ui-theme
 cdparanoia
 celluloid
 ceni
@@ -122,6 +129,7 @@ conky-all
 conky-manager
 connectagram
 converseen
+convertall
 cowsay
 cpuidtool
 cpulimit
@@ -289,6 +297,7 @@ gkrellmwireless
 gkrellm-xkb
 gkrelltop
 glabels
+glava
 gmrun
 gmtp
 gnome-2048
@@ -298,6 +307,7 @@ gnome-chess
 gnome-clocks
 gnome-color-manager
 gnome-disk-utility
+gnome-extra-icons
 gnome-firmware
 gnome-font-viewer
 gnome-games
@@ -309,6 +319,7 @@ gnome-nettool
 gnome-nibbles
 gnome-online-accounts-gtk
 gnome-packagekit
+gnome-ppp
 gnome-software
 gnome-software-plugin-flatpak
 gnome-software-plugin-fwupd
@@ -326,6 +337,7 @@ goldendict
 goodvibes
 goverlay
 gparted
+gpg-wks-server
 gpick
 gpicview
 gpodder
@@ -481,8 +493,6 @@ lp-solve
 lrzsz
 lsb-base
 lshw-gtk
-lsp-plugins-lv2
-lsp-plugins-r3d-glx
 lsscsi
 luckybackup
 luckybackup-data
@@ -493,9 +503,9 @@ magic-wormhole
 magnus
 maim
 manpages-dev
+materia-gtk-theme
 maxautoclicker
 mcabber
-mda-lv2
 mediainfo
 mediainfo-gui
 media-player-info
@@ -507,6 +517,7 @@ metadata-cleaner
 meteo-qt
 mhwaveedit
 micro
+mictray
 milkytracker
 minder
 minicom
@@ -589,6 +600,9 @@ node-prismjs
 nomacs
 numlockx
 nvidia-detect
+obapps
+obkey
+obmenu
 obmenu-generator
 obs-plugins
 obs-studio
@@ -598,6 +612,7 @@ onboard-data
 onioncircuits
 onionshare
 openbox
+openbox-menu
 openipmi
 open-iscsi
 openprinting-ppds
@@ -810,6 +825,7 @@ thunar-font-manager
 thunar-gtkhash
 thunar-media-tags-plugin
 thunar-modified-desktop-file
+thunar-sendto-shredder
 thunar-shares-plugin
 thunar-vcs-plugin
 thunar-volman
@@ -934,7 +950,6 @@ yasr
 yelp
 youtubedl-gui
 ytfzf
-zam-plugins
 zaz
 zbar-tools
 zeitgeist-core

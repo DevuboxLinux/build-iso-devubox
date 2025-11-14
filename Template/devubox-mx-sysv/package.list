@@ -1,7 +1,9 @@
 7zip-rar
 7zip-standalone
+abiword
 abook
 ack
+adapta-gtk-theme
 advert-block-antix
 adwaita-icon-theme-legacy
 adwaita-qt
@@ -19,6 +21,7 @@ aptitude-common
 aptkit
 arandr
 archivemount
+arc-theme
 arpwatch
 aspell
 aspell-en
@@ -39,6 +42,8 @@ bash-config
 bat
 bcache-tools
 bind9-utils
+binwalk
+blackbird-gtk-theme
 blanket
 bleachbit
 blueman
@@ -58,10 +63,13 @@ brltty
 bsd-mailx
 btop
 bulky
+bunsen-papirus-icon-theme
+bunsen-themes
 caca-utils
 ca-certificates-java
 caja-eiciel
 calcurse
+calf-plugins
 cantata
 can-utils
 captain
@@ -71,12 +79,17 @@ catdoc
 catfish
 cava
 cbatticon
+cbpp-icon-theme
+cbpp-ui-theme
 cdparanoia
 celluloid
+ceni
 chafa
 cherrytree
 chntpw
 chromium-bsu
+clamav
+clamtk
 claws-mail-acpi-notifier
 claws-mail-address-keeper
 claws-mail-archiver-plugin
@@ -115,6 +128,7 @@ conky-all
 conky-manager
 connectagram
 converseen
+convertall
 cowsay
 cpuidtool
 cpulimit
@@ -155,6 +169,7 @@ discount
 disktype
 dislocker
 dosbox
+doublecmd-qt
 drawing
 driveutility
 droopy-mx
@@ -163,6 +178,10 @@ duff
 dukto
 dump
 dupeguru
+dvdauthor
+dvgrab
+dvtm
+easyeffects
 easystroke
 easytag
 ecryptfs-utils
@@ -232,6 +251,8 @@ foremost
 fping
 freeaptx-utils
 freefilesync
+freetuxtv
+frei0r-plugins
 frozen-bubble
 fsarchiver
 fsearch
@@ -273,6 +294,7 @@ gkrellmwireless
 gkrellm-xkb
 gkrelltop
 glabels
+glava
 gmrun
 gmtp
 gnome-2048
@@ -282,6 +304,7 @@ gnome-chess
 gnome-clocks
 gnome-color-manager
 gnome-disk-utility
+gnome-extra-icons
 gnome-firmware
 gnome-font-viewer
 gnome-games
@@ -293,6 +316,7 @@ gnome-nettool
 gnome-nibbles
 gnome-online-accounts-gtk
 gnome-packagekit
+gnome-ppp
 gnome-software
 gnome-software-plugin-flatpak
 gnome-software-plugin-fwupd
@@ -301,6 +325,7 @@ gnome-sudoku
 gnome-taquin
 gnome-usage
 gnome-weather
+gnumeric
 gnupg-agent
 gobby
 gobi-loader
@@ -309,10 +334,12 @@ goldendict
 goodvibes
 goverlay
 gparted
+gpg-wks-server
 gpick
 gpicview
 gpodder
 gprename
+gpsd
 graphicsmagick
 greybird-gtk-theme
 gromit-mpx
@@ -388,6 +415,8 @@ iptraf-ng
 irssi
 irssi-plugin-otr
 irssi-plugin-xmpp
+isc-dhcp-client
+isc-dhcp-common
 isolinux
 isomaster
 java-common
@@ -395,9 +424,11 @@ jgmenu
 jhead
 jmtpfs
 joystick
+kdeconnect
 kdiskmark
 keepassxc
 kid3-qt
+kleopatra
 kristall
 ksnip
 l3afpad
@@ -467,6 +498,7 @@ magic-wormhole
 magnus
 maim
 manpages-dev
+materia-gtk-theme
 maxautoclicker
 mcabber
 mediainfo
@@ -480,6 +512,7 @@ metadata-cleaner
 meteo-qt
 mhwaveedit
 micro
+mictray
 milkytracker
 minder
 minicom
@@ -562,6 +595,9 @@ node-prismjs
 nomacs
 numlockx
 nvidia-detect
+obapps
+obkey
+obmenu
 obmenu-generator
 obs-plugins
 obs-studio
@@ -571,6 +607,7 @@ onboard-data
 onioncircuits
 onionshare
 openbox
+openbox-menu
 openipmi
 open-iscsi
 openprinting-ppds
@@ -711,6 +748,7 @@ rng-tools5
 rofi
 rtmpdump
 rtorrent
+rubberband-ladspa
 rxvt-unicode
 safecopy
 samdump2
@@ -752,6 +790,7 @@ stress-ng
 subversion
 suckless-tools
 swell-foop
+swh-plugins
 switcheroo-control
 synapse
 synaptic
@@ -778,6 +817,7 @@ thunar-font-manager
 thunar-gtkhash
 thunar-media-tags-plugin
 thunar-modified-desktop-file
+thunar-sendto-shredder
 thunar-shares-plugin
 thunar-vcs-plugin
 thunar-volman
@@ -847,6 +887,7 @@ wget2
 wimtools
 wipe
 wireguard-tools
+wireshark
 wmalauncher
 wodim
 woeusb
