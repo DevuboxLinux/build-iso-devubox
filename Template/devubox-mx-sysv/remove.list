@@ -11,7 +11,9 @@ fonts-wine
 libwine
 numix-gtk-theme
 numix-icon-theme
+openresolv
 qsynth
+resolvconf
 texlive-base
 texlive-binaries
 wine32

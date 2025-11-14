@@ -1076,8 +1076,9 @@ do_stage_4() {
         update-rc.d networking defaults
         say "Disable bootchart-done"
         update-rc.d "bootchart-done" remove
-        say "Disable tor"
+        say "Disable tor and clamav"
         update-rc.d tor remove
+        update-rc.d clamav-freshclam remove
         end_part_strict
     fi
 
