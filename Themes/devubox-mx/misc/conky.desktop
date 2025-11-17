@@ -8,3 +8,4 @@ Name[en_IN]=Conky
 Name=Conky
 Comment[en_IN]=
 Comment=
+OnlyShowIn=XFCE, Fluxbox
