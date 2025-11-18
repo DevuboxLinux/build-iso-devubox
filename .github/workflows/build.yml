@@ -52,7 +52,13 @@ jobs:
           # Install downloaded .debs, then fix/install missing deps
           sudo dpkg -i ./debootstrap_1.0.141devuan1_all.deb ./devuan-keyring_2025.08.09_all.deb || true
           sudo apt-get install -f -y
-
+          
+      - name: Import GPG Private Key
+        run: |
+          echo "$GPG_PRIVATE_KEY" > /tmp/private.key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          
       - name: Setup VNC password and xstartup
         run: |
           sleep 1
