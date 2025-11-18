@@ -447,6 +447,7 @@ libcanberra-gtk3-module
 libcanberra-gtk-module
 libcanberra-pulse
 libgcc-s1:i386
+libinput-tools
 libjxl-gdk-pixbuf
 libpam-gnome-keyring
 libreoffice
