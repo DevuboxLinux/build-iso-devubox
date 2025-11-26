@@ -38,7 +38,7 @@ ALPHABETARCVERSION="_RC2"
 #TEMPLATE
 DISTRO_VERSION="${RELEASEVERSION}_$DEFAULTDESKTOP$ALPHABETARCVERSION"
 DISTRO_NAME="Devubox"
-RELEASE_DATE="November 20, 2025"
+RELEASE_DATE="December 30, 2025"
 
 # system defaults, these end up inside the squash file system mostly
 DEBIAN_RELEASE="excalibur"
