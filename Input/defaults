@@ -19,7 +19,7 @@ ASCII_CODE_NAME="Infinity"
 DISTRO_VERSION="MX25"
 
 DISTRO_NAME="Devubox"
-RELEASE_DATE="November 20, 2025"
+RELEASE_DATE="December 20, 2025"
 
 # system defaults, these end up inside the squash file system mostly
 DEBIAN_RELEASE="trixie"
