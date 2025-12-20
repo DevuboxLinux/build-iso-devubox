@@ -6,7 +6,7 @@
 # defaults-system which has the lowest priority and defaults-local
 # which has the highest
 #----------------------------------------------------------------------
-# Work in Progress
+
 DEFAULTDESKTOP="Lite_sysvinit"
 DISTRO_VERSION="${RELEASEVERSION}_$DEFAULTDESKTOP$ALPHABETARCVERSION"
 

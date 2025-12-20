@@ -241,6 +241,7 @@ fonts-fork-awesome
 fonts-hack
 fonts-linex
 fonts-mathjax
+fonts-noto-cjk
 fonts-quicksand
 fonts-recommended
 fonts-roboto-slab
@@ -452,6 +453,7 @@ libcanberra-gtk3-module
 libcanberra-gtk-module
 libcanberra-pulse
 libgcc-s1:i386
+libinput-tools
 libjxl-gdk-pixbuf
 libpam-gnome-keyring
 libreoffice
@@ -483,6 +485,7 @@ lightdm-gtk-greeter
 lightdm-gtk-greeter-mx
 lightdm-gtk-greeter-settings
 lightdm-modified-init
+lightpad
 link-grammar-dictionaries-en
 links2
 linssid
