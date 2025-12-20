@@ -1,0 +1,16 @@
+#----------------------------------------------------------------------
+# defaults file for build-antiX-iso
+#
+# This file contains almost all of the variables that determine what
+# actually gets built.  It has a middle priority in between
+# defaults-system which has the lowest priority and defaults-local
+# which has the highest
+#----------------------------------------------------------------------
+
+DEFAULTDESKTOP="VeryLite_sysvinit"
+DISTRO_VERSION="${RELEASEVERSION}_$DEFAULTDESKTOP$ALPHABETARCVERSION"
+
+ENABLE_LOCALES=Default
+THEME=devubox-mx
+ISO_FLAV=devubox-mx-verylite-sysv
+ARCH=amd64
