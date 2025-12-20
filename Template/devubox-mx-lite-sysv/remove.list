@@ -21,3 +21,8 @@ texlive-binaries
 wine32
 wine64
 winetricks
+plymouth-modified-init
+plymouth
+plymouth-themes
+plymouth-themes-mx
+plymouth-x11
