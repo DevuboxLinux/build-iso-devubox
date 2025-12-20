@@ -53,8 +53,13 @@ claws-mail-tools
 claws-mail-vcalendar-plugin
 conky-all
 conky-manager
+converseen
 cpupower-gui
 cpu-x
+crow-translate
+custom-toolbox
+czkawka-cli
+czkawka-gui
 dconf-cli
 dconf-editor
 deb-installer
@@ -99,7 +104,6 @@ gexec
 ghex
 gkbd-capplet
 gmrun
-gmtp
 gnome-accessibility-themes
 gnome-characters
 gnome-disk-utility
@@ -108,7 +112,6 @@ gnome-keyring
 gnome-nettool
 gnome-online-accounts-gtk
 gnome-ppp
-gnome-sound-recorder
 gnupg-agent
 gobi-loader
 goodvibes
@@ -161,7 +164,6 @@ libcanberra-pulse
 libinput-tools
 libjxl-gdk-pixbuf
 libpam-gnome-keyring
-libreoffice
 libreoffice-calc
 libreoffice-common
 libreoffice-core
@@ -191,8 +193,6 @@ meld
 menulibre
 mesa-vulkan-drivers
 metadata-cleaner
-meteo-qt
-modem-manager-gui
 moreutils
 mousepad
 mousetweaks
@@ -294,7 +294,6 @@ secure-delete
 simple-scan
 simplescreenrecorder
 skippy-xd
-smplayer
 sound-theme-freedesktop
 sox
 ssh
@@ -311,7 +310,6 @@ tesseract-ocr
 thunar
 thunar-archive-plugin
 thunar-data
-thunar-font-manager
 thunar-gtkhash
 thunar-media-tags-plugin
 thunar-modified-desktop-file
@@ -345,6 +343,7 @@ webp
 webp-pixbuf-loader
 wipe
 wmalauncher
+xarchiver
 xbacklight
 xcape
 xcursor-themes
