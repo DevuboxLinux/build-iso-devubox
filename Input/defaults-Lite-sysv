@@ -7,7 +7,7 @@
 # which has the highest
 #----------------------------------------------------------------------
 
-DEFAULTDESKTOP="Lite_sysvinit"
+DEFAULTDESKTOP="BaseLite_sysvinit"
 DISTRO_VERSION="${RELEASEVERSION}_$DEFAULTDESKTOP$ALPHABETARCVERSION"
 
 ENABLE_LOCALES=Default
