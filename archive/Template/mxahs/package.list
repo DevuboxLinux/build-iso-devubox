@@ -109,6 +109,7 @@ gnome-mahjongg
 gnupg-agent
 #gottet
 gparted
+graphicsmagick-imagemagick-compat
 greybird-gtk-theme
 #grub-customizer
 #gscan2pdf
@@ -152,7 +153,6 @@ lame
 #leafpad
 libc6:i386
 libcanberra-gstreamer
-libcanberra-gtk-module
 libcanberra-gtk3-module
 libcanberra-pulse
 libgcc-s1:i386
@@ -191,8 +191,8 @@ lightdm-gtk-greeter
 lightdm-gtk-greeter-mx
 lightdm-gtk-greeter-settings
 lightdm-modified-init
-linux-image-liquorix-amd64
-linux-headers-liquorix-amd64
+linux-image-siduction-amd64
+linux-headers-siduction-amd64
 lo-main-helper
 luckybackup
 luckybackup-data
@@ -229,7 +229,7 @@ mx-system-sounds
 #mx-timeset-gui
 mx-tour
 mx-usb-unmounter
-mx-viewer
+#mx-viewer
 mx-welcome
 mx25-artwork
 mythes-en-us
@@ -247,7 +247,6 @@ nomacs
 nomacs-l10n
 #numix-gtk-theme
 #numix-icon-theme
-nvidia-detect
 onboard
 onboard-data
 open-vm-tools
@@ -326,6 +325,7 @@ thunar-volman
 thunderbird
 #timeset-gui
 timeshift
+tlp
 #touchpad-indicator
 transmission-common
 transmission-qt

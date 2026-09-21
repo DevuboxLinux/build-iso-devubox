@@ -106,6 +106,7 @@ gnome-mahjongg
 gnupg-agent
 #gottet
 gparted
+graphicsmagick-imagemagick-compat
 greybird-gtk-theme
 #grub-customizer
 #gscan2pdf
@@ -150,7 +151,6 @@ lame
 #leafpad
 libc6:i386
 libcanberra-gstreamer
-libcanberra-gtk-module
 libcanberra-gtk3-module
 libcanberra-pulse
 libgcc-s1:i386
@@ -230,7 +230,7 @@ mx-system-sounds
 #mx-timeset-gui
 mx-tour
 mx-usb-unmounter
-mx-viewer
+#mx-viewer
 mx-welcome
 mx25-artwork
 mythes-en-us
@@ -248,7 +248,6 @@ nomacs
 nomacs-l10n
 #numix-gtk-theme
 #numix-icon-theme
-nvidia-detect
 onboard
 onboard-data
 open-vm-tools
@@ -323,6 +322,7 @@ thunar-volman
 thunderbird
 #timeset-gui
 timeshift
+tlp
 #touchpad-indicator
 transmission-common
 transmission-qt
@@ -335,7 +335,8 @@ tumbler-plugins-extra
 #unetbootin
 #uno-libs3
 ure
-#uswsusp
+va-driver-all
+vdpau-driver-all
 vcdimager
 #virtualbox-guest-dkms
 virtualbox-guest-utils

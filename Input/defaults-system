@@ -15,6 +15,11 @@
 #----------------------------------------------------------------------
 
     APT_GET_OPTS="-q -y -o DPkg::Options::=--force-confold"
+
+# Target distribution family:
+# - debian: debootstrap + apt/dpkg tooling (MX/antiX)
+# - arch:   pacstrap/pacman tooling (work-in-progress)
+DISTRO_FAMILY="debian"
            CACHE="debootstrap,chroot"
     CACHE_EXPIRE="7"
 
@@ -33,18 +38,14 @@ CODE_NAME="Infinity"
 ASCII_CODE_NAME="Infinity"
 
 RELEASEVERSION="MX25"
-ALPHABETARCVERSION="_RC2"
+ALPHABETARCVERSION="_RC3"
 
 #TEMPLATE
 DISTRO_VERSION="${RELEASEVERSION}_$DEFAULTDESKTOP$ALPHABETARCVERSION"
 DISTRO_NAME="Devubox"
-RELEASE_DATE="December 31, 2025"
+RELEASE_DATE="December 31, 2026"
 
-# system defaults, these end up inside the squash file system mostly
 DEBIAN_RELEASE="excalibur"
-
-LIVE_USER="demo"
-NEW_HOSTNAME="Devubox-MX25"
 
 # kernel
 # standard 64 bit

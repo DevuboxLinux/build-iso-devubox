@@ -94,7 +94,7 @@ read_args() {
             -help|h)    do_usage                     ;;
 
           -prefix|p)      PREFIX=$val                ;;
-       -prefix=*p=*)      PREFIX=$val                ;;
+       -prefix=*|p=*)     PREFIX=$val                ;;
            -quiet|q)       QUIET=true                ;;
 
          -version|v)    do_version                   ;;
@@ -167,6 +167,30 @@ copy_dir() {
     [ ! -d $src  ] && error "Is not a theme directory: $(pqw $short_src)"       && return
     check_targ_dir $targ $create || return
     echo_run cp --recursive $COPY_ARGS $src/* $targ/
+}
+
+rm_file() {
+    enter_function rm_file "$@"
+    require_args rm_file "$1" "target file"
+
+    local short_targ=$1
+    local       targ=$PREFIX$1
+
+    [ ! -e $targ ] && warn "Target file not found: $(pqw $short_targ)" && return
+    [ ! -f $targ ] && error "Target is not a file: $(pqw $short_targ)" && return
+    echo_run rm -f $targ
+}
+
+rm_dir() {
+    enter_function rm_dir "$@"
+    require_args rm_dir "$1" "target directory"
+
+    local short_targ=$1
+    local       targ=$PREFIX${1%/}
+
+    [ ! -e $targ ] && warn "Target directory not found: $(pqw $short_targ)" && return
+    [ ! -d $targ ] && error "Target is not a directory: $(pqw $short_targ)" && return
+    echo_run rm -rf $targ
 }
 
 escape_regex() { echo "$1" | sed -r 's=([][{}*+?\\().=])=\\\1=g' ;}

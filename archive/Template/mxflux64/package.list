@@ -230,7 +230,7 @@ mx-rofi-manager
 mx-select-sound
 mx-tour
 mx-usb-unmounter
-mx-viewer
+#mx-viewer
 mx-welcome
 # mx21-archive-keyring
 mx25-artwork
@@ -249,7 +249,6 @@ nomacs
 nomacs-l10n
 # numix-gtk-theme
 # numix-icon-theme
-nvidia-detect
 open-vm-tools
 onboard
 onboard-data
@@ -302,11 +301,14 @@ thunar-gtkhash
 thunar-modified-desktop-file
 thunar-volman
 tint2
+tlp
 # touchpad-indicator
 # ttf-mscorefonts-installer
 tumbler
 tumbler-common
 tumbler-plugins-extra
+va-driver-all
+vdpau-driver-all
 vcdimager
 # virtualbox-guest-dkms
 # virtualbox-guest-utils
