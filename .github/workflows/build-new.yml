@@ -10,13 +10,22 @@ jobs:
 
     steps:
       - name: Speed up installs
+        shell: bash
         run: |
+          set -euo pipefail
+
           sudo rm -f /var/lib/man-db/auto-update || true
-          sudo sh -c 'echo "path-exclude /usr/share/man/*" > /etc/dpkg/dpkg.cfg.d/01_nodocs'
+
+          sudo sh -c \
+            'echo "path-exclude /usr/share/man/*" > /etc/dpkg/dpkg.cfg.d/01_nodocs'
 
       - name: Install build dependencies
+        shell: bash
         run: |
+          set -euo pipefail
+
           sudo apt-get update
+
           sudo apt-get install -y \
             debootstrap expect \
             squashfs-tools genisoimage xorriso zsync debconf-utils kmod \
@@ -25,82 +34,227 @@ jobs:
             mtools dosfstools rsync gnupg sudo ca-certificates \
             pigz xz-utils lz4 zstd bc binutils procps git
 
-          wget "https://pkgmaster.devuan.org/devuan/pool/main/d/debootstrap/debootstrap_1.0.141devuan1_all.deb"
-          wget "https://pkgmaster.devuan.org/devuan/pool/main/d/devuan-keyring/devuan-keyring_2025.08.09_all.deb"
+          wget \
+            "https://pkgmaster.devuan.org/devuan/pool/main/d/debootstrap/debootstrap_1.0.141devuan1_all.deb"
 
-          sudo dpkg -i ./debootstrap_1.0.141devuan1_all.deb ./devuan-keyring_2025.08.09_all.deb || true
+          wget \
+            "https://pkgmaster.devuan.org/devuan/pool/main/d/devuan-keyring/devuan-keyring_2025.08.09_all.deb"
+
+          sudo dpkg -i \
+            ./debootstrap_1.0.141devuan1_all.deb \
+            ./devuan-keyring_2025.08.09_all.deb || true
+
           sudo apt-get install -f -y
 
-      - name: Import GPG Private Key
+      - name: Import GPG private key into root
         shell: bash
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
         run: |
-          mkdir -p ~/.gnupg
-          chmod 700 ~/.gnupg
-          echo "$GPG_PRIVATE_KEY" > /tmp/private.key
-          gpg --batch --import /tmp/private.key
-          rm -f /tmp/private.key
+          set -euo pipefail
+          umask 077
+
+          if [ -z "${GPG_PRIVATE_KEY}" ]; then
+            echo "GPG_PRIVATE_KEY is empty or unavailable."
+            exit 1
+          fi
+
+          sudo install -d \
+            -o root \
+            -g root \
+            -m 700 \
+            /root/.gnupg
+
+          printf '%s\n' "$GPG_PRIVATE_KEY" \
+            > /tmp/devubox-gpg-private-key.asc
+
+          chmod 600 /tmp/devubox-gpg-private-key.asc
+
+          sudo gpg \
+            --batch \
+            --homedir /root/.gnupg \
+            --import /tmp/devubox-gpg-private-key.asc
+
+          rm -f /tmp/devubox-gpg-private-key.asc
+
+      - name: Trust the Devubox GPG key in root
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          printf '%s:6:\n' \
+            'DAFA27F7C8EECEACDC56805C3FEF465AE7183F38' |
+            sudo gpg \
+              --batch \
+              --homedir /root/.gnupg \
+              --import-ownertrust
+
+          echo "Imported root GPG key:"
+          sudo gpg \
+            --batch \
+            --homedir /root/.gnupg \
+            --list-secret-keys \
+            --keyid-format LONG \
+            --with-subkey-fingerprint \
+            'DAFA27F7C8EECEACDC56805C3FEF465AE7183F38'
+
+      - name: Verify root GPG signing
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          printf 'Devubox root GPG signing test\n' \
+            > /tmp/devubox-gpg-test.txt
+
+          sudo gpg \
+            --batch \
+            --yes \
+            --homedir /root/.gnupg \
+            --local-user \
+              'DAFA27F7C8EECEACDC56805C3FEF465AE7183F38!' \
+            --detach-sign \
+            --output /tmp/devubox-gpg-test.txt.sig \
+            /tmp/devubox-gpg-test.txt
+
+          sudo gpg \
+            --batch \
+            --homedir /root/.gnupg \
+            --verify \
+            /tmp/devubox-gpg-test.txt.sig \
+            /tmp/devubox-gpg-test.txt
+
+          rm -f \
+            /tmp/devubox-gpg-test.txt \
+            /tmp/devubox-gpg-test.txt.sig
 
       - name: Clone build tree to /mnt
+        shell: bash
         run: |
+          set -euo pipefail
+
           sudo rm -rf /mnt/build-iso-devubox
-          sudo git clone https://github.com/DevuboxLinux/build-iso-devubox /mnt/build-iso-devubox
-      - name: Clone build tree to /mnt
-        run: |
-          sudo rm -rf /mnt/build-iso-devubox
+
           sudo git clone \
             https://github.com/DevuboxLinux/build-iso-devubox \
             /mnt/build-iso-devubox
-      
+
+          sudo chmod +x /mnt/build-iso-devubox/build-iso
+
       - name: Patch debootstrap environment handling
         shell: bash
         run: |
+          set -euo pipefail
+
           sudo python3 - <<'PY'
           from pathlib import Path
-      
+
           path = Path("/mnt/build-iso-devubox/build-iso")
           text = path.read_text()
-      
-          old = 'local debian_frontend_env=""'
-          if old not in text:
-              raise SystemExit("Target code was not found; refusing to patch")
-      
-          text = text.replace(
-              'local debian_frontend_env=""',
-              'local -a debootstrap_env=()',
-              1
-          )
-          text = text.replace(
-              'debian_frontend_env="DEBIAN_FRONTEND=noninteractive"',
-              'debootstrap_env=(env DEBIAN_FRONTEND=noninteractive)',
-              1
-          )
-          text = text.replace(
-              '$SUDO $debian_frontend_env ',
-              '$SUDO "${debootstrap_env[@]}" ',
-          )
-      
+
+          old_block = '''local debian_frontend_env=""
+        if [[ -n $auto_mode ]]; then
+            debian_frontend_env="DEBIAN_FRONTEND=noninteractive"
+            say "Running debootstrap in noninteractive mode (auto mode enabled)..."
+        else
+            say "Running debootstrap in interactive mode..."
+        fi
+          '''
+
+          new_block = '''local -a debootstrap_env=()
+        if [[ -n $auto_mode ]]; then
+            debootstrap_env=(env DEBIAN_FRONTEND=noninteractive)
+            say "Running debootstrap in noninteractive mode (auto mode enabled)..."
+        else
+            say "Running debootstrap in interactive mode..."
+        fi
+          '''
+
+          if old_block not in text:
+              raise SystemExit(
+                  "Expected debootstrap environment block was not found; "
+                  "refusing to patch."
+              )
+
+          text = text.replace(old_block, new_block, 1)
+
+          old_calls = '''$SUDO $debian_frontend_env "$patched_debootstrap" $args "$DEBIAN_RELEASE" "$sqfs_dir" "$url"
+        else
+            # shellcheck disable=SC2086
+            $SUDO $debian_frontend_env debootstrap $args "$DEBIAN_RELEASE" "$sqfs_dir" "$url"
+          '''
+
+          new_calls = '''$SUDO "${debootstrap_env[@]}" "$patched_debootstrap" $args "$DEBIAN_RELEASE" "$sqfs_dir" "$url"
+        else
+            # shellcheck disable=SC2086
+            $SUDO "${debootstrap_env[@]}" debootstrap $args "$DEBIAN_RELEASE" "$sqfs_dir" "$url"
+          '''
+
+          if old_calls not in text:
+              raise SystemExit(
+                  "Expected debootstrap command block was not found; "
+                  "refusing to patch."
+              )
+
+          text = text.replace(old_calls, new_calls, 1)
+
           path.write_text(text)
           PY
-      
+
           sudo chmod +x /mnt/build-iso-devubox/build-iso
-      
+
       - name: Verify patched build script
+        shell: bash
         run: |
-          grep -n -A8 -B3 'debootstrap_env' \
+          set -euo pipefail
+
+          grep -n -A8 -B3 \
+            'debootstrap_env' \
             /mnt/build-iso-devubox/build-iso
-      
+
       - name: Start build Devubox-MX
+        shell: bash
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
+          set -euo pipefail
+
           cd /mnt/build-iso-devubox
-          sudo ./build-iso --user-default defaults-Base-sysv --auto
-          
-      - name: Upload ISO artifact
+
+          sudo ./build-iso \
+            --user-default defaults-Base-sysv \
+            --auto
+
+      - name: Verify ISO artifact directory
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          artifact_source="/mnt/build-iso-mx/Remaster/iso-files"
+
+          if [ ! -d "$artifact_source" ]; then
+            echo "Artifact directory does not exist:"
+            echo "$artifact_source"
+            exit 1
+          fi
+
+          echo "Artifact directory contents:"
+          sudo ls -halR "$artifact_source"
+
+      - name: Upload ISO artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: devubox-mx-iso
-          path: /mnt/build-iso-devubox/**/*.iso
+          path: /mnt/build-iso-mx/Remaster/iso-files/
           if-no-files-found: error
+          include-hidden-files: true
+
+      - name: Remove temporary GPG files
+        if: always()
+        shell: bash
+        run: |
+          sudo rm -f \
+            /tmp/devubox-gpg-private-key.asc \
+            /tmp/devubox-gpg-test.txt \
+            /tmp/devubox-gpg-test.txt.sig
