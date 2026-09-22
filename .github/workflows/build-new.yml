@@ -89,29 +89,28 @@ jobs:
           set -euo pipefail
 
           printf 'Devubox root GPG signing test\n' \
-            > /tmp/devubox-gpg-test.txt
+            > "$RUNNER_TEMP/devubox-gpg-test.txt"
 
           sudo gpg \
             --batch \
             --yes \
             --homedir /root/.gnupg \
-            --local-user \
-              'DAFA27F7C8EECEACDC56805C3FEF465AE7183F38!' \
+            --local-user 'DAFA27F7C8EECEACDC56805C3FEF465AE7183F38!' \
             --detach-sign \
-            --output /tmp/devubox-gpg-test.txt.sig \
-            /tmp/devubox-gpg-test.txt
+            --output "$RUNNER_TEMP/devubox-gpg-test.txt.sig" \
+            "$RUNNER_TEMP/devubox-gpg-test.txt"
 
           sudo gpg \
             --batch \
             --homedir /root/.gnupg \
             --verify \
-            /tmp/devubox-gpg-test.txt.sig \
-            /tmp/devubox-gpg-test.txt
+            "$RUNNER_TEMP/devubox-gpg-test.txt.sig" \
+            "$RUNNER_TEMP/devubox-gpg-test.txt"
 
           rm -f \
-            /tmp/devubox-gpg-test.txt \
-            /tmp/devubox-gpg-test.txt.sig
-
+            "$RUNNER_TEMP/devubox-gpg-test.txt" \
+            "$RUNNER_TEMP/devubox-gpg-test.txt.sig"
+            
       - name: Clone build tree to /mnt
         run: |
           sudo rm -rf /mnt/build-iso-devubox
