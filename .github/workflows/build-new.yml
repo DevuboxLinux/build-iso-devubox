@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  desktop:
+  iso-build:
     runs-on: ubuntu-latest
     timeout-minutes: 180
 
@@ -46,14 +46,58 @@ jobs:
         run: |
           sudo rm -rf /mnt/build-iso-devubox
           sudo git clone https://github.com/DevuboxLinux/build-iso-devubox /mnt/build-iso-devubox
-
+      - name: Clone build tree to /mnt
+        run: |
+          sudo rm -rf /mnt/build-iso-devubox
+          sudo git clone \
+            https://github.com/DevuboxLinux/build-iso-devubox \
+            /mnt/build-iso-devubox
+      
+      - name: Patch debootstrap environment handling
+        shell: bash
+        run: |
+          sudo python3 - <<'PY'
+          from pathlib import Path
+      
+          path = Path("/mnt/build-iso-devubox/build-iso")
+          text = path.read_text()
+      
+          old = 'local debian_frontend_env=""'
+          if old not in text:
+              raise SystemExit("Target code was not found; refusing to patch")
+      
+          text = text.replace(
+              'local debian_frontend_env=""',
+              'local -a debootstrap_env=()',
+              1
+          )
+          text = text.replace(
+              'debian_frontend_env="DEBIAN_FRONTEND=noninteractive"',
+              'debootstrap_env=(env DEBIAN_FRONTEND=noninteractive)',
+              1
+          )
+          text = text.replace(
+              '$SUDO $debian_frontend_env ',
+              '$SUDO "${debootstrap_env[@]}" ',
+          )
+      
+          path.write_text(text)
+          PY
+      
+          sudo chmod +x /mnt/build-iso-devubox/build-iso
+      
+      - name: Verify patched build script
+        run: |
+          grep -n -A8 -B3 'debootstrap_env' \
+            /mnt/build-iso-devubox/build-iso
+      
       - name: Start build Devubox-MX
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
           cd /mnt/build-iso-devubox
           sudo ./build-iso --user-default defaults-Base-sysv --auto
-
+          
       - name: Upload ISO artifact
         uses: actions/upload-artifact@v4
         with:
