@@ -183,7 +183,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: devubox-mx-iso
-          path: /mnt/build-iso-mx/Remaster/iso-files/
+          path: /mnt/build-iso-devubox/Remaster/iso-files/
           if-no-files-found: error
           include-hidden-files: true
 
