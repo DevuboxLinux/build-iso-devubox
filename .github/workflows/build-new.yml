@@ -1,0 +1,52 @@
+name: Devubox-MX ISO Auto Build Environment (Stable)
+
+on:
+  workflow_dispatch:   # Manual start
+
+jobs:
+  desktop:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Speed up installs (disable man-db)
+        run: |
+          sleep 1
+          # Make package installs faster by disabling man-db auto update
+          sudo rm -f /var/lib/man-db/auto-update || true
+          sudo sh -c 'echo "path-exclude /usr/share/man/*" > /etc/dpkg/dpkg.cfg.d/01_nodocs'
+
+      - name: Update system and install XFCE, VNC, QEMU, and build tools
+        run: |
+          sleep 1
+          # Update package lists
+          sudo apt-get update
+
+          # Install build tools
+          sudo apt-get install -y \
+            debootstrap expect \
+            squashfs-tools genisoimage xorriso zsync debconf-utils kmod \
+            syslinux-utils cpio
+
+          # Clone Devubox-MX ISO build script (into the workspace)
+          git clone https://github.com/DevuboxLinux/build-iso-devubox
+
+          # Download required .deb files (Devuan packages used by the build)
+          wget "https://pkgmaster.devuan.org/devuan/pool/main/d/debootstrap/debootstrap_1.0.141devuan1_all.deb"
+          wget "https://pkgmaster.devuan.org/devuan/pool/main/d/devuan-keyring/devuan-keyring_2025.08.09_all.deb"
+
+          # Install downloaded .debs, then fix/install missing deps
+          sudo dpkg -i ./debootstrap_1.0.141devuan1_all.deb ./devuan-keyring_2025.08.09_all.deb || true
+          sudo apt-get install -f -y
+          
+      - name: Import GPG Private Key
+        run: |
+          echo "$GPG_PRIVATE_KEY" > /tmp/private.key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          
+      - name: Start build Devubox-MX
+        run: |
+          # Write build-iso script
+          cd /mnt
+          sudo git clone https://github.com/DevuboxLinux/build-iso-devubox
+          cd build-iso-devubox
+          sudo ./build-iso --user-default defaults-Base-sysv --auto
