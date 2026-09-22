@@ -261,6 +261,7 @@ menu
 menu-l10n
 menu-xdg
 mesa-utils
+mesa-libgallium
 mobile-broadband-provider-info
 modemmanager
 module-assistant
@@ -404,13 +405,13 @@ tdb-tools
 telnet
 testdisk
 time
-tlp
 tmux
 traceroute
 tree
 ttf-bitstream-vera
 tzdata-legacy
 ucf
+uc-tool-mx
 udev
 udevil
 udftools
@@ -431,10 +432,8 @@ usbmuxd
 usbutils
 user-installed-packages
 util-linux-extra
-va-driver-all
 vainfo
 vbetool
-vdpau-driver-all
 vim-tiny
 vorbis-tools
 vpnc

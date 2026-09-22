@@ -831,6 +831,7 @@ tigervnc-viewer
 timeshift
 tin
 tint2
+tlp
 tlpui
 toilet
 torbrowser-launcher
@@ -838,6 +839,7 @@ touche
 touchegg
 touchpad-indicator
 toybox
+transume
 transmission-cli
 transmission-common
 transmission-qt
@@ -862,6 +864,8 @@ usermode
 user-setup
 v4l-utils
 variety
+va-driver-all
+vdpau-driver-all
 vcdimager
 ventoy
 veracrypt
