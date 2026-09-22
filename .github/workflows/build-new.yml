@@ -167,7 +167,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          artifact_source="/mnt/build-iso-mx/Remaster/iso-files"
+          artifact_source="/mnt/build-iso-devubox/Remaster/iso-files"
 
           if [ ! -d "$artifact_source" ]; then
             echo "Artifact directory does not exist:"

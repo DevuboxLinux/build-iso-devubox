@@ -16,7 +16,7 @@ HOME_URL="https://devuboxlinux.github.io"
 CODE_NAME="Infinity"
 ASCII_CODE_NAME="Infinity"
 
-DISTRO_VERSION="MX25"
+DISTRO_VERSION="MX25.3"
 
 DISTRO_NAME="Devubox"
 RELEASE_DATE="April 40, 2026"
