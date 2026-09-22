@@ -10,22 +10,13 @@ jobs:
 
     steps:
       - name: Speed up installs
-        shell: bash
         run: |
-          set -euo pipefail
-
           sudo rm -f /var/lib/man-db/auto-update || true
-
-          sudo sh -c \
-            'echo "path-exclude /usr/share/man/*" > /etc/dpkg/dpkg.cfg.d/01_nodocs'
+          sudo sh -c 'echo "path-exclude /usr/share/man/*" > /etc/dpkg/dpkg.cfg.d/01_nodocs'
 
       - name: Install build dependencies
-        shell: bash
         run: |
-          set -euo pipefail
-
           sudo apt-get update
-
           sudo apt-get install -y \
             debootstrap expect \
             squashfs-tools genisoimage xorriso zsync debconf-utils kmod \
@@ -34,16 +25,10 @@ jobs:
             mtools dosfstools rsync gnupg sudo ca-certificates \
             pigz xz-utils lz4 zstd bc binutils procps git
 
-          wget \
-            "https://pkgmaster.devuan.org/devuan/pool/main/d/debootstrap/debootstrap_1.0.141devuan1_all.deb"
+          wget "https://pkgmaster.devuan.org/devuan/pool/main/d/debootstrap/debootstrap_1.0.141devuan1_all.deb"
+          wget "https://pkgmaster.devuan.org/devuan/pool/main/d/devuan-keyring/devuan-keyring_2025.08.09_all.deb"
 
-          wget \
-            "https://pkgmaster.devuan.org/devuan/pool/main/d/devuan-keyring/devuan-keyring_2025.08.09_all.deb"
-
-          sudo dpkg -i \
-            ./debootstrap_1.0.141devuan1_all.deb \
-            ./devuan-keyring_2025.08.09_all.deb || true
-
+          sudo dpkg -i ./debootstrap_1.0.141devuan1_all.deb ./devuan-keyring_2025.08.09_all.deb || true
           sudo apt-get install -f -y
 
       - name: Import GPG private key into root
@@ -128,102 +113,55 @@ jobs:
             /tmp/devubox-gpg-test.txt.sig
 
       - name: Clone build tree to /mnt
-        shell: bash
         run: |
-          set -euo pipefail
-
           sudo rm -rf /mnt/build-iso-devubox
-
-          sudo git clone \
-            https://github.com/DevuboxLinux/build-iso-devubox \
-            /mnt/build-iso-devubox
-
-          sudo chmod +x /mnt/build-iso-devubox/build-iso
+          sudo git clone https://github.com/DevuboxLinux/build-iso-devubox /mnt/build-iso-devubox
 
       - name: Patch debootstrap environment handling
         shell: bash
         run: |
-          set -euo pipefail
-
           sudo python3 - <<'PY'
           from pathlib import Path
-
+      
           path = Path("/mnt/build-iso-devubox/build-iso")
           text = path.read_text()
-
-          old_block = '''local debian_frontend_env=""
-        if [[ -n $auto_mode ]]; then
-            debian_frontend_env="DEBIAN_FRONTEND=noninteractive"
-            say "Running debootstrap in noninteractive mode (auto mode enabled)..."
-        else
-            say "Running debootstrap in interactive mode..."
-        fi
-          '''
-
-          new_block = '''local -a debootstrap_env=()
-        if [[ -n $auto_mode ]]; then
-            debootstrap_env=(env DEBIAN_FRONTEND=noninteractive)
-            say "Running debootstrap in noninteractive mode (auto mode enabled)..."
-        else
-            say "Running debootstrap in interactive mode..."
-        fi
-          '''
-
-          if old_block not in text:
-              raise SystemExit(
-                  "Expected debootstrap environment block was not found; "
-                  "refusing to patch."
-              )
-
-          text = text.replace(old_block, new_block, 1)
-
-          old_calls = '''$SUDO $debian_frontend_env "$patched_debootstrap" $args "$DEBIAN_RELEASE" "$sqfs_dir" "$url"
-        else
-            # shellcheck disable=SC2086
-            $SUDO $debian_frontend_env debootstrap $args "$DEBIAN_RELEASE" "$sqfs_dir" "$url"
-          '''
-
-          new_calls = '''$SUDO "${debootstrap_env[@]}" "$patched_debootstrap" $args "$DEBIAN_RELEASE" "$sqfs_dir" "$url"
-        else
-            # shellcheck disable=SC2086
-            $SUDO "${debootstrap_env[@]}" debootstrap $args "$DEBIAN_RELEASE" "$sqfs_dir" "$url"
-          '''
-
-          if old_calls not in text:
-              raise SystemExit(
-                  "Expected debootstrap command block was not found; "
-                  "refusing to patch."
-              )
-
-          text = text.replace(old_calls, new_calls, 1)
-
+      
+          old = 'local debian_frontend_env=""'
+          if old not in text:
+              raise SystemExit("Target code was not found; refusing to patch")
+      
+          text = text.replace(
+              'local debian_frontend_env=""',
+              'local -a debootstrap_env=()',
+              1
+          )
+          text = text.replace(
+              'debian_frontend_env="DEBIAN_FRONTEND=noninteractive"',
+              'debootstrap_env=(env DEBIAN_FRONTEND=noninteractive)',
+              1
+          )
+          text = text.replace(
+              '$SUDO $debian_frontend_env ',
+              '$SUDO "${debootstrap_env[@]}" ',
+          )
+      
           path.write_text(text)
           PY
-
+      
           sudo chmod +x /mnt/build-iso-devubox/build-iso
-
+      
       - name: Verify patched build script
-        shell: bash
         run: |
-          set -euo pipefail
-
-          grep -n -A8 -B3 \
-            'debootstrap_env' \
+          grep -n -A8 -B3 'debootstrap_env' \
             /mnt/build-iso-devubox/build-iso
-
+      
       - name: Start build Devubox-MX
-        shell: bash
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          set -euo pipefail
-
           cd /mnt/build-iso-devubox
-
-          sudo ./build-iso \
-            --user-default defaults-Base-sysv \
-            --auto
-
+          sudo ./build-iso --user-default defaults-Base-sysv --auto
+       
       - name: Verify ISO artifact directory
         if: always()
         shell: bash
