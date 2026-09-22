@@ -1,52 +1,62 @@
 name: Devubox-MX ISO Auto Build Environment (Stable)
 
 on:
-  workflow_dispatch:   # Manual start
+  workflow_dispatch:
 
 jobs:
   desktop:
     runs-on: ubuntu-latest
+    timeout-minutes: 180
+
     steps:
-      - name: Speed up installs (disable man-db)
+      - name: Speed up installs
         run: |
-          sleep 1
-          # Make package installs faster by disabling man-db auto update
           sudo rm -f /var/lib/man-db/auto-update || true
           sudo sh -c 'echo "path-exclude /usr/share/man/*" > /etc/dpkg/dpkg.cfg.d/01_nodocs'
 
-      - name: Update system and install XFCE, VNC, QEMU, and build tools
+      - name: Install build dependencies
         run: |
-          sleep 1
-          # Update package lists
           sudo apt-get update
-
-          # Install build tools
           sudo apt-get install -y \
             debootstrap expect \
             squashfs-tools genisoimage xorriso zsync debconf-utils kmod \
-            syslinux-utils cpio
+            syslinux-utils cpio \
+            grub2-common grub-pc-bin grub-efi-amd64-bin \
+            mtools dosfstools rsync gnupg sudo ca-certificates \
+            pigz xz-utils lz4 zstd bc binutils procps git
 
-          # Clone Devubox-MX ISO build script (into the workspace)
-          git clone https://github.com/DevuboxLinux/build-iso-devubox
-
-          # Download required .deb files (Devuan packages used by the build)
           wget "https://pkgmaster.devuan.org/devuan/pool/main/d/debootstrap/debootstrap_1.0.141devuan1_all.deb"
           wget "https://pkgmaster.devuan.org/devuan/pool/main/d/devuan-keyring/devuan-keyring_2025.08.09_all.deb"
 
-          # Install downloaded .debs, then fix/install missing deps
           sudo dpkg -i ./debootstrap_1.0.141devuan1_all.deb ./devuan-keyring_2025.08.09_all.deb || true
           sudo apt-get install -f -y
-          
+
       - name: Import GPG Private Key
-        run: |
-          echo "$GPG_PRIVATE_KEY" > /tmp/private.key
+        shell: bash
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-          
-      - name: Start build Devubox-MX
         run: |
-          # Write build-iso script
-          cd /mnt
-          sudo git clone https://github.com/DevuboxLinux/build-iso-devubox
-          cd build-iso-devubox
+          mkdir -p ~/.gnupg
+          chmod 700 ~/.gnupg
+          echo "$GPG_PRIVATE_KEY" > /tmp/private.key
+          gpg --batch --import /tmp/private.key
+          rm -f /tmp/private.key
+
+      - name: Clone build tree to /mnt
+        run: |
+          sudo rm -rf /mnt/build-iso-devubox
+          sudo git clone https://github.com/DevuboxLinux/build-iso-devubox /mnt/build-iso-devubox
+
+      - name: Start build Devubox-MX
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          cd /mnt/build-iso-devubox
           sudo ./build-iso --user-default defaults-Base-sysv --auto
+
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: devubox-mx-iso
+          path: /mnt/build-iso-devubox/**/*.iso
+          if-no-files-found: error
