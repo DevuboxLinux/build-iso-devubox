@@ -7,10 +7,10 @@
 # which has the highest
 #----------------------------------------------------------------------
 
-DEFAULTDESKTOP="VeryLite_sysvinit"
+DEFAULTDESKTOP="Lite_sysvinit"
 DISTRO_VERSION="${RELEASEVERSION}_$DEFAULTDESKTOP$ALPHABETARCVERSION"
 
 ENABLE_LOCALES=Default
 THEME=devubox-mx
-ISO_FLAV=devubox-mx-verylite-sysv
+ISO_FLAV=devubox-mx-lite-sysv
 ARCH=amd64
