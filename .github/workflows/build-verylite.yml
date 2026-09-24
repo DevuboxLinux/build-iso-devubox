@@ -1,0 +1,197 @@
+name: Devubox-MX VeryLite ISO Auto Build Environment (Stable)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  iso-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    steps:
+      - name: Speed up installs
+        run: |
+          sudo rm -f /var/lib/man-db/auto-update || true
+          sudo sh -c 'echo "path-exclude /usr/share/man/*" > /etc/dpkg/dpkg.cfg.d/01_nodocs'
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            debootstrap expect \
+            squashfs-tools genisoimage xorriso zsync debconf-utils kmod \
+            syslinux-utils cpio \
+            grub2-common grub-pc-bin grub-efi-amd64-bin \
+            mtools dosfstools rsync gnupg sudo ca-certificates \
+            pigz xz-utils lz4 zstd bc binutils procps git
+
+          wget "https://pkgmaster.devuan.org/devuan/pool/main/d/debootstrap/debootstrap_1.0.141devuan1_all.deb"
+          wget "https://pkgmaster.devuan.org/devuan/pool/main/d/devuan-keyring/devuan-keyring_2025.08.09_all.deb"
+
+          sudo dpkg -i ./debootstrap_1.0.141devuan1_all.deb ./devuan-keyring_2025.08.09_all.deb || true
+          sudo apt-get install -f -y
+
+      - name: Import GPG private key into root
+        shell: bash
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+
+          if [ -z "${GPG_PRIVATE_KEY}" ]; then
+            echo "GPG_PRIVATE_KEY is empty or unavailable."
+            exit 1
+          fi
+
+          sudo install -d \
+            -o root \
+            -g root \
+            -m 700 \
+            /root/.gnupg
+
+          printf '%s\n' "$GPG_PRIVATE_KEY" \
+            > /tmp/devubox-gpg-private-key.asc
+
+          chmod 600 /tmp/devubox-gpg-private-key.asc
+
+          sudo gpg \
+            --batch \
+            --homedir /root/.gnupg \
+            --import /tmp/devubox-gpg-private-key.asc
+
+          rm -f /tmp/devubox-gpg-private-key.asc
+
+      - name: Trust the Devubox GPG key in root
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          printf '%s:6:\n' \
+            'DAFA27F7C8EECEACDC56805C3FEF465AE7183F38' |
+            sudo gpg \
+              --batch \
+              --homedir /root/.gnupg \
+              --import-ownertrust
+
+          echo "Imported root GPG key:"
+          sudo gpg \
+            --batch \
+            --homedir /root/.gnupg \
+            --list-secret-keys \
+            --keyid-format LONG \
+            --with-subkey-fingerprint \
+            'DAFA27F7C8EECEACDC56805C3FEF465AE7183F38'
+
+      - name: Verify root GPG signing
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          printf 'Devubox root GPG signing test\n' \
+            > "$RUNNER_TEMP/devubox-gpg-test.txt"
+
+          sudo gpg \
+            --batch \
+            --yes \
+            --homedir /root/.gnupg \
+            --local-user 'DAFA27F7C8EECEACDC56805C3FEF465AE7183F38!' \
+            --detach-sign \
+            --output "$RUNNER_TEMP/devubox-gpg-test.txt.sig" \
+            "$RUNNER_TEMP/devubox-gpg-test.txt"
+
+          sudo gpg \
+            --batch \
+            --homedir /root/.gnupg \
+            --verify \
+            "$RUNNER_TEMP/devubox-gpg-test.txt.sig" \
+            "$RUNNER_TEMP/devubox-gpg-test.txt"
+
+          rm -f \
+            "$RUNNER_TEMP/devubox-gpg-test.txt" \
+            "$RUNNER_TEMP/devubox-gpg-test.txt.sig"
+            
+      - name: Clone build tree to /mnt
+        run: |
+          sudo rm -rf /mnt/build-iso-devubox
+          sudo git clone https://github.com/DevuboxLinux/build-iso-devubox /mnt/build-iso-devubox
+
+      - name: Patch debootstrap environment handling
+        shell: bash
+        run: |
+          sudo python3 - <<'PY'
+          from pathlib import Path
+      
+          path = Path("/mnt/build-iso-devubox/build-iso")
+          text = path.read_text()
+      
+          old = 'local debian_frontend_env=""'
+          if old not in text:
+              raise SystemExit("Target code was not found; refusing to patch")
+      
+          text = text.replace(
+              'local debian_frontend_env=""',
+              'local -a debootstrap_env=()',
+              1
+          )
+          text = text.replace(
+              'debian_frontend_env="DEBIAN_FRONTEND=noninteractive"',
+              'debootstrap_env=(env DEBIAN_FRONTEND=noninteractive)',
+              1
+          )
+          text = text.replace(
+              '$SUDO $debian_frontend_env ',
+              '$SUDO "${debootstrap_env[@]}" ',
+          )
+      
+          path.write_text(text)
+          PY
+      
+          sudo chmod +x /mnt/build-iso-devubox/build-iso
+      
+      - name: Verify patched build script
+        run: |
+          grep -n -A8 -B3 'debootstrap_env' \
+            /mnt/build-iso-devubox/build-iso
+      
+      - name: Start build Devubox-MX
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          cd /mnt/build-iso-devubox
+          sudo ./build-iso --user-default defaults-VeryLite-sysv --auto
+       
+      - name: Verify ISO artifact directory
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          artifact_source="/mnt/build-iso-devubox/Remaster/iso-files"
+
+          if [ ! -d "$artifact_source" ]; then
+            echo "Artifact directory does not exist:"
+            echo "$artifact_source"
+            exit 1
+          fi
+
+          echo "Artifact directory contents:"
+          sudo ls -halR "$artifact_source"
+
+      - name: Upload ISO artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: devubox-mx-iso
+          path: /mnt/build-iso-devubox/Remaster/iso-files/
+          if-no-files-found: error
+          include-hidden-files: true
+
+      - name: Remove temporary GPG files
+        if: always()
+        shell: bash
+        run: |
+          sudo rm -f \
+            /tmp/devubox-gpg-private-key.asc \
+            /tmp/devubox-gpg-test.txt \
+            /tmp/devubox-gpg-test.txt.sig
