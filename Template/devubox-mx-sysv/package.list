@@ -839,11 +839,11 @@ touche
 touchegg
 touchpad-indicator
 toybox
-transume
 transmission-cli
 transmission-common
 transmission-qt
 transmission-remote-gtk
+transume
 trash-cli
 ttf-mscorefonts-installer
 tty-clock
@@ -863,10 +863,10 @@ usbtop
 usermode
 user-setup
 v4l-utils
-variety
 va-driver-all
-vdpau-driver-all
+variety
 vcdimager
+vdpau-driver-all
 ventoy
 veracrypt
 virt-manager
