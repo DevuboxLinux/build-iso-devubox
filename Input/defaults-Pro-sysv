@@ -7,7 +7,7 @@
 # which has the highest
 #----------------------------------------------------------------------
 
-DEFAULTDESKTOP="Base_sysvinit"
+DEFAULTDESKTOP="Pro_sysvinit"
 DISTRO_VERSION="${RELEASEVERSION}_$DEFAULTDESKTOP$ALPHABETARCVERSION"
 
 # kernel
@@ -19,5 +19,5 @@ K_VERSION="7.*.*"
 
 ENABLE_LOCALES=Default
 THEME=devubox-mx
-ISO_FLAV=devubox-mx-sysv
+ISO_FLAV=devubox-mx-pro-sysv
 ARCH=amd64

@@ -1,4 +1,4 @@
-name: Devubox-MX Lite ISO Auto Build Environment (Stable)
+name: Devubox-MX Standard ISO Auto Build Environment (Stable)
 
 on:
   workflow_dispatch:
@@ -159,7 +159,7 @@ jobs:
           DEBIAN_FRONTEND: noninteractive
         run: |
           cd /mnt/build-iso-devubox
-          sudo ./build-iso --user-default defaults-Lite-sysv --auto
+          sudo ./build-iso --user-default defaults-Std-sysv --auto
        
       - name: Verify ISO artifact directory
         if: always()
