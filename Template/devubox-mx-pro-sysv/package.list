@@ -1,3 +1,4 @@
+
 7zip-rar
 7zip-standalone
 abiword
@@ -23,6 +24,8 @@ aptkit
 arandr
 archivemount
 arc-theme
+ardour
+arduino
 arpwatch
 aspell
 aspell-en
@@ -47,6 +50,7 @@ binwalk
 blackbird-gtk-theme
 blanket
 bleachbit
+blender
 blueman
 bluetooth
 bluez
@@ -144,6 +148,7 @@ custom-toolbox
 czkawka-cli
 czkawka-gui
 dar
+darktable
 davfs2
 dbench
 dc3dd
@@ -171,6 +176,8 @@ digitemp
 discount
 disktype
 dislocker
+docker-compose
+docker.io
 dosbox
 doublecmd-qt
 drawing
@@ -184,6 +191,7 @@ dupeguru
 dvdauthor
 dvgrab
 dvtm
+dxvk
 easyeffects
 easystroke
 easytag
@@ -194,6 +202,7 @@ efitools
 eflite
 electrum
 elementary-xfce-icon-theme
+entangle
 entr
 escputil
 espeak-data
@@ -233,6 +242,7 @@ flameshot
 flashrom
 flatpak
 foliate
+fontforge
 font-manager
 fonts-clear-sans
 fonts-comic-neue
@@ -257,9 +267,11 @@ foomatic-db-engine
 foremost
 fping
 freeaptx-utils
+freecad
 freefilesync
 freetuxtv
 frei0r-plugins
+fritzing
 frozen-bubble
 fsarchiver
 fsearch
@@ -339,6 +351,7 @@ gnumeric
 gnupg-agent
 gobby
 gobi-loader
+godot3
 go-l2tp
 goldendict
 goodvibes
@@ -381,6 +394,7 @@ gxkb
 handbrake
 handbrake-cli
 hardinfo2
+hashcat
 heif-gdk-pixbuf
 heif-thumbnailer
 hexchat
@@ -396,6 +410,7 @@ homebank
 hsetroot
 html2text
 httpie
+hugin
 hunspell-en-gb
 hunspell-en-us
 hwdata
@@ -440,11 +455,13 @@ jhead
 jmtpfs
 joystick
 kdeconnect
+kdenlive
 kdiskmark
 keepassxc
 kid3-qt
 kleopatra
 kristall
+krita
 ksnip
 l3afpad
 lame
@@ -464,6 +481,7 @@ libgcc-s1:i386
 libinput-tools
 libjxl-gdk-pixbuf
 libpam-gnome-keyring
+librecad
 libreoffice
 libreoffice-base
 libreoffice-base-core
@@ -500,6 +518,7 @@ linssid
 linux-cpupower
 linux-headers-liquorix-amd64
 linux-image-liquorix-amd64
+lmms
 localsend
 lo-main-helper
 lp-solve
@@ -537,6 +556,7 @@ minicom
 minisat
 minitube
 mixxx
+mkvtoolnix-gui
 moc
 modem-manager-gui
 moreutils
@@ -555,6 +575,7 @@ multiload-ng-common
 multiload-ng-systray
 multitail
 mumble
+musescore
 mx23-artwork
 mx25-artwork
 mx-apps
@@ -633,6 +654,7 @@ openbox-menu
 openipmi
 open-iscsi
 openprinting-ppds
+openscad
 open-vm-tools
 open-vm-tools-desktop
 ophcrack
@@ -682,6 +704,7 @@ pitivi
 pixz
 plank-reloaded
 playerctl
+playonlinux
 plymouth
 plymouth-themes
 plymouth-themes-mx
@@ -714,6 +737,7 @@ python3-legacy-cgi
 python3-xdg
 python-apt-common-devuan
 python-is-python3
+q4wine
 qalculate-gtk
 qbittorrent
 qdirstat
@@ -751,6 +775,8 @@ quodlibet
 qv4l2
 radio
 ranger
+rapid-photo-downloader
+rawtherapee
 rclone
 rclone-browser
 rdesktop
@@ -790,15 +816,18 @@ scrcpy
 screen
 screenfetch
 screenkey
+scribus
 scrounge-ntfs
 seahorse
 secure-delete
+selinux-policy-default
 sendemail
 simple-scan
 simplescreenrecorder
 skippy-xd
 smbclient
 smplayer
+sonnet6-plugins
 soundconverter
 sound-theme-freedesktop
 sox
@@ -908,6 +937,7 @@ vlc-plugin-bittorrent
 vlc-plugin-fluidsynth
 vlc-plugin-svg
 vmfs-tools
+vokoscreen-ng
 volumeicon-alsa
 vpx-tools
 w3m
@@ -919,6 +949,15 @@ webp
 webp-pixbuf-loader
 wget2
 wimtools
+winbind
+wine
+wine32:i386
+wine64
+wine-binfmt
+wine-desktop-files
+wine-gecko-2.47.4
+wine-mono10.0.0
+winetricks
 wipe
 wireguard-tools
 wireshark
@@ -997,3 +1036,4 @@ zsh
 zsh-autosuggestions
 zsh-syntax-highlighting
 zsh-theme-powerlevel9k
+zzz
