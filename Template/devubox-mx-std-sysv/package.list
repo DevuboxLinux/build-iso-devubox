@@ -82,6 +82,7 @@ dconf-editor
 deb-get
 deb-installer
 debootstrap
+deja-dup
 devubox-goodies
 d-feet
 dh-python
@@ -89,6 +90,7 @@ dosbox
 drawing
 driveutility
 droopy-mx
+easyeffects
 easystroke
 easytag
 efitools
@@ -100,6 +102,7 @@ evtest
 exiv2
 exo-utils
 f3
+falkon
 fastboot
 feh
 file-roller
@@ -111,6 +114,9 @@ flameshot
 flatpak
 foliate
 font-manager
+fonts-noto-cjk
+fonts-symbola
+fonts-recommended
 fonts-ubuntu-console
 font-viewer
 four-in-a-row
