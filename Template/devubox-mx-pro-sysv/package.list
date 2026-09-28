@@ -4,6 +4,7 @@ abiword
 abook
 ack
 adapta-gtk-theme
+adb
 advert-block-antix
 adwaita-icon-theme-legacy
 adwaita-qt
@@ -47,7 +48,9 @@ blackbird-gtk-theme
 blanket
 bleachbit
 blueman
+bluetooth
 bluez
+bluez-cups
 bluez-test-tools
 bluez-tools
 bmon
@@ -207,6 +210,7 @@ ext4magic
 f3
 faketime
 fancontrol
+fastboot
 fatresize
 fbi
 fbreader
@@ -220,6 +224,7 @@ ffmpegthumbnailer
 figlet
 file-roller
 filezilla
+firejail-profiles
 firetools
 firmware-cavium
 firmware-ti-connectivity
@@ -247,6 +252,7 @@ fonts-ubuntu-console
 fonts-vlgothic
 fonts-wqy-microhei
 fonts-wqy-zenhei
+font-viewer
 foomatic-db-engine
 foremost
 fping
@@ -258,6 +264,7 @@ frozen-bubble
 fsarchiver
 fsearch
 fstransform
+fwupd-signed
 fzf
 galculator
 gallery-dl
@@ -325,6 +332,7 @@ gnome-sound-recorder
 gnome-sudoku
 gnome-system-tools
 gnome-taquin
+gnome-themes-extra
 gnome-usage
 gnome-weather
 gnumeric
@@ -343,6 +351,7 @@ gpodder
 gprename
 gpsd
 graphicsmagick
+graphicsmagick-imagemagick-compat
 greybird-gtk-theme
 gromit-mpx
 grsync
@@ -350,7 +359,9 @@ grub-customizer
 gsfonts
 gsimplecal
 gsmartcontrol
+gstreamer1.0-nice
 gstreamer1.0-plugins-bad
+gstreamer1.0-plugins-ugly
 gstreamer1.0-pulseaudio
 gstreamer1.0-vaapi
 gthumb
@@ -385,6 +396,8 @@ homebank
 hsetroot
 html2text
 httpie
+hunspell-en-gb
+hunspell-en-us
 hwdata
 hwloc
 hyperv-daemons
@@ -488,6 +501,7 @@ linux-cpupower
 linux-headers-liquorix-amd64
 linux-image-liquorix-amd64
 localsend
+lo-main-helper
 lp-solve
 lrzsz
 lsb-base
@@ -544,6 +558,8 @@ mumble
 mx23-artwork
 mx25-artwork
 mx-apps
+mx-codecs
+mx-comfort-themes
 mx-conky
 mx-conky-data
 mx-docs
@@ -565,6 +581,7 @@ mx-viewer
 mx-welcome
 mypaint
 mystiq
+mythes-en-us
 nautilus-data
 ncat
 ncdu
@@ -600,6 +617,7 @@ nomacs
 numlockx
 nvidia-detect
 obapps
+obconf
 obkey
 obmenu
 obmenu-generator
@@ -635,6 +653,7 @@ parallel
 partclone
 partimage
 pass-otp
+pastebinit
 pavucontrol
 pbzip2
 pcp
@@ -676,6 +695,7 @@ posterazor
 powerline
 powersupply-gtk
 pppoe
+preview-mx
 procmail
 progress
 proj-bin
@@ -706,6 +726,9 @@ qgnomeplatform-qt6
 qla-tools
 qpdf
 qpdfview
+qpdfview-djvu-plugin
+qpdfview-ps-plugin
+qpdfview-translations
 qphotorec
 qpwgraph
 qt5ct
@@ -739,7 +762,9 @@ reglookup
 remind
 remmina
 remmina-plugin-exec
+remmina-plugin-rdp
 remmina-plugin-spice
+remmina-plugin-vnc
 rename
 renameutils
 rescuezilla
@@ -832,6 +857,7 @@ timeshift
 tin
 tint2
 tlp
+tlp-rdw
 tlpui
 toilet
 torbrowser-launcher
@@ -913,18 +939,24 @@ xcursor-themes
 xdg-desktop-portal
 xdg-desktop-portal-gtk
 xdg-desktop-portal-xapp
+xdg-user-dirs-gtk
 xfburn
 xfce4-appfinder
 xfce4-clipman
 xfce4-dict
 xfce4-mime-settings
+xfce4-notes
+xfce4-notes-plugin
 xfce4-notifyd
 xfce4-screensaver
 xfce4-screenshooter
 xfce4-sensors-plugin
 xfce4-taskmanager
 xfce4-terminal
+xfce-modified-default-background
 xfconf
+xfdesktop4
+xfdesktop4-data
 xfsdump
 xinput-calibrator
 xl2tpd
@@ -948,11 +980,13 @@ xxkb
 yasr
 yelp
 youtubedl-gui
+yt-dlp
 ytfzf
 zaz
 zbar-tools
 zeitgeist-core
 zenmap
+zerofree
 zfs-dkms
 zile
 zim

@@ -18,6 +18,7 @@ asunder
 audacious
 audacity
 audio-recorder
+avahi-discover
 baobab
 bash-config
 blanket
@@ -88,6 +89,7 @@ espeakup
 evemu-tools
 evince
 evtest
+exiv2
 exo-utils
 f3
 fastboot
@@ -359,6 +361,8 @@ python-is-python3
 qalculate-gtk
 qbittorrent
 qdirstat
+qemu-guest-agent
+qemu-system-x86
 qemu-utils
 qgnomeplatform-qt5
 qgnomeplatform-qt6
@@ -377,6 +381,8 @@ qtox
 qtpass
 qtqr
 quadrapassel
+rclone
+rclone-browser
 remmina
 remmina-plugin-exec
 remmina-plugin-rdp
@@ -394,6 +400,7 @@ simplescreenrecorder
 skippy-xd
 sound-theme-freedesktop
 sox
+sqlitebrowser
 ssh-askpass
 ssh-askpass-gnome
 stacer
@@ -428,16 +435,21 @@ touchegg
 touchpad-indicator
 transmission-common
 transmission-qt
+trash-cli
 tumbler
 tumbler-common
 tumbler-plugins-extra
 uget
 unetbootin
 ure
+usbtop
+usermode
+user-setup
 va-driver-all
 vcdimager
 vdpau-driver-all
 ventoy
+virt-manager
 virtualbox-guest-utils
 virtualbox-guest-utils-modified-init
 virtualbox-guest-x11
@@ -449,6 +461,7 @@ warpinator
 webapp-manager
 webp-pixbuf-loader
 x11vnc
+xarchiver
 xbacklight
 xcape
 xchm
@@ -476,6 +489,7 @@ xfdesktop4
 xfdesktop4-data
 xinput-calibrator
 xournalpp
+xpad
 xsel
 xserver-xorg-video-mach64
 xserver-xorg-video-tdfx
