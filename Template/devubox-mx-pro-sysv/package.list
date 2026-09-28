@@ -953,7 +953,7 @@ wine32:i386
 wine64
 wine-binfmt
 wine-desktop-files
-wine-gecko-2.47.4
+wine-gecko2.47.4
 wine-mono10.0.0
 winetricks
 wipe
@@ -1034,4 +1034,3 @@ zsh
 zsh-autosuggestions
 zsh-syntax-highlighting
 zsh-theme-powerlevel9k
-zzz
