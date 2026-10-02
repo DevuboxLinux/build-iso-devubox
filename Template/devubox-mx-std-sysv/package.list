@@ -14,6 +14,8 @@ apart-gtk
 aptitude
 aptitude-common
 arandr
+archivemount
+arpwatch
 aspell
 aspell-en
 asunder
@@ -29,6 +31,7 @@ baobab
 bar
 barrier
 bash-config
+bat
 blanket
 bleachbit
 blueman
@@ -37,12 +40,13 @@ bluez
 bluez-cups
 bluez-tools
 bolt
-brightness-udev
+bonnie++
 boot-info
 boot-repair
 boot-sav
 boot-sav-extra
 borgbackup
+brightness-udev
 btop
 bulky
 ca-certificates-java
@@ -80,6 +84,7 @@ claws-mail-tnef-parser
 claws-mail-tools
 claws-mail-vcalendar-plugin
 clonezilla
+cmospwd
 colord
 colord-data
 command-not-found
@@ -94,7 +99,9 @@ czkawka-cli
 czkawka-gui
 dconf-cli
 dconf-editor
+ddgr
 ddrescueview
+ddrutility
 deb-get
 deb-installer
 debootstrap
@@ -106,6 +113,7 @@ dfc
 d-feet
 dh-python
 disktype
+dislocker
 dosbox
 drawing
 driveutility
@@ -126,6 +134,7 @@ exo-utils
 f3
 falkon
 fastboot
+fatresize
 fbreader
 fd-find
 fdupes
@@ -141,8 +150,8 @@ flatpak
 foliate
 font-manager
 fonts-noto-cjk
-fonts-symbola
 fonts-recommended
+fonts-symbola
 fonts-ubuntu-console
 font-viewer
 four-in-a-row
@@ -254,8 +263,8 @@ iagno
 iamerican
 ibritish
 icedax
-iio-sensor-proxy
 iftop
+iio-sensor-proxy
 indicator-keylock
 inkscape
 input-utils
@@ -344,6 +353,7 @@ metadata-cleaner
 micro
 minder
 modem-manager-gui
+moreutils
 mousepad
 mpv
 mpv-mpris
@@ -384,8 +394,10 @@ network-manager-gnome
 network-manager-openconnect-gnome
 network-manager-openvpn-gnome
 nitrogen
+nmap
 numlockx
 nvidia-detect
+nvme-cli
 oathtool
 obapps
 obconf
@@ -402,8 +414,8 @@ open-vm-tools
 open-vm-tools-desktop
 orage
 osmo
-ovmf
 os-uninstaller
+ovmf
 packagekit-command-not-found
 pacpl
 pacstall
@@ -457,6 +469,7 @@ python-is-python3
 qalculate-gtk
 qbittorrent
 qdirstat
+qdiskinfo
 qemu-block-extra
 qemu-guest-agent
 qemu-system-gui
@@ -492,6 +505,7 @@ remmina-plugin-rdp
 remmina-plugin-spice
 remmina-plugin-vnc
 rescuezilla
+ripgrep
 riseup-vpn
 ristretto
 sane-airscan
@@ -534,6 +548,7 @@ thunar-sendto-shredder
 thunar-shares-plugin
 thunar-volman
 thunderbird
+time
 timeshift
 tint2
 tlp
@@ -545,6 +560,7 @@ touchpad-indicator
 transmission-common
 transmission-qt
 trash-cli
+tree
 ttf-mscorefonts-installer
 tumbler
 tumbler-common
@@ -572,6 +588,7 @@ vlc-l10n
 warpinator
 webapp-manager
 webp-pixbuf-loader
+wipe
 woeusb
 woeusb-ng
 x11vnc
