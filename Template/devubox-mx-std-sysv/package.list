@@ -27,6 +27,7 @@ audacity
 audio-recorder
 autokey-gtk
 avahi-discover
+avahi-utils
 baobab
 bar
 barrier
@@ -51,6 +52,7 @@ btop
 bulky
 ca-certificates-java
 catfish
+cbatticon
 cdparanoia
 cdrdao
 celluloid
@@ -173,6 +175,7 @@ geany-plugin-overview
 geany-plugins
 geany-plugin-webhelper
 geoip-bin
+geoip-databse
 gexec
 ghex
 gigolo
@@ -208,6 +211,7 @@ gnome-taquin
 gnome-themes-extra
 gnome-weather
 gnupg-agent
+gnupg-utils
 gobby
 goldendict-ng
 goodvibes
