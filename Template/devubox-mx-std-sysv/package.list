@@ -199,7 +199,7 @@ geany-plugin-overview
 geany-plugins
 geany-plugin-webhelper
 geoip-bin
-geoip-databse
+geoip-database
 gexec
 ghex
 gigolo
@@ -464,6 +464,7 @@ packagekit-command-not-found
 pacpl
 pacstall
 papirus-mxblue
+partedmagic-tools
 partimage
 pass
 pass-otp
