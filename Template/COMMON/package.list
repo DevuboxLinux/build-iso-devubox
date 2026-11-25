@@ -231,6 +231,7 @@ libnss-myhostname
 libpam-fprintd
 libpam-wtmpdb
 libparted-i18n
+libunrar5t64
 light
 linux-base
 linux-libc-dev

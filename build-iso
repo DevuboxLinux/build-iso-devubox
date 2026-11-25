@@ -613,7 +613,8 @@ do_stage_0() {
     # shellcheck disable=SC2086
     pick_prog GZIP     $GZIP_PROGS
 
-    require_programs chroot isohybrid mksquashfs md5sum sudo tee zsync \
+    # isohybrid: only for mkisofs/genisoimage (make_uefi_iso); xorriso does it itself
+    require_programs chroot mksquashfs md5sum sudo tee zsync \
         pkill expand strings iconv unbuffer
 
     mkdir -p "$output_dir" || my_exit
@@ -869,7 +870,7 @@ do_stage_2() {
     enter_stage 2 "Bootstrap root filesystem"
 
     if [[ ${DISTRO_FAMILY:-debian} = arch ]]; then
-        say "Using pacstrap (Arch; experimental)"
+        say "Using pacstrap (Arch)"
 
         [[ $do_fast ]] && mount_tmpfs
 
@@ -885,12 +886,14 @@ do_stage_2() {
             return
         fi
 
+        # Resolved on every host: Arch hosts bootstrap with their own
+        # configuration but still need this one installed in the target.
         local pacman_conf_src mirror_src
+        : "${PACMAN_CONF:=Input/arch/pacman.conf}"
+        : "${PACMAN_MIRRORLIST:=Input/arch/mirrorlist}"
+        pacman_conf_src=$script_dir/${PACMAN_CONF#./}
+        mirror_src=$script_dir/${PACMAN_MIRRORLIST#./}
         if ! is_arch_host; then
-            : "${PACMAN_CONF:=Input/arch/pacman.conf}"
-            : "${PACMAN_MIRRORLIST:=Input/arch/mirrorlist}"
-            pacman_conf_src=$script_dir/${PACMAN_CONF#./}
-            mirror_src=$script_dir/${PACMAN_MIRRORLIST#./}
             [[ -r "$pacman_conf_src" ]] || fatal "Missing PACMAN_CONF: $(pqw "$PACMAN_CONF")"
             [[ -r "$mirror_src" ]] || fatal "Missing PACMAN_MIRRORLIST: $(pqw "$PACMAN_MIRRORLIST")"
         fi
@@ -911,6 +914,7 @@ do_stage_2() {
             if is_arch_host; then
                 # On Arch host, use native pacman configuration
                 say "Using host pacman configuration (Arch Linux)"
+                import_mxarch_key
                 # shellcheck disable=SC2086
                 $SUDO pacstrap -c -G -M "$sqfs_dir" $PACSTRAP_PACKAGES 2>&1 | tr '\r' '\n'
                 local pacstrap_ret=${PIPESTATUS[0]}
@@ -936,6 +940,11 @@ do_stage_2() {
                     $SUDO bash -o pipefail -c "pacman-key --populate archlinux 2>&1 | tr '\r' '\n'"
                 fi
 
+                # pacstrap verifies the synced databases (the [mxarch] one
+                # included) with the host keyring, so the MX Arch key has to be
+                # trusted here too -- the in-chroot import happens much later.
+                import_mxarch_key
+
                 # shellcheck disable=SC2086
                 pacstrap_with_keyring_retry "$pacman_conf" "$sqfs_dir" $PACSTRAP_PACKAGES
                 local pacstrap_ret=$?
@@ -948,26 +957,25 @@ do_stage_2() {
             [[ -e "$sqfs_dir/bin/bash" ]] || fatal "pacstrap failed"
         fi
 
-        # Ensure the target has a working pacman configuration and mirrorlist.
-        if is_arch_host; then
-            # On Arch host, pacstrap should have set up the target correctly
-            # But let's verify and fix if needed
-            if [[ ! -f "$sqfs_dir/etc/pacman.conf" ]]; then
-                say "Copying host pacman.conf to target"
-                $SUDO cp "/etc/pacman.conf" "$sqfs_dir/etc/pacman.conf"
-            fi
-            if [[ ! -f "$sqfs_dir/etc/pacman.d/mirrorlist" ]]; then
-                say "Copying host mirrorlist to target"
-                $SUDO cp "/etc/pacman.d/mirrorlist" "$sqfs_dir/etc/pacman.d/mirrorlist"
-            fi
-        else
-            # On Debian/MX hosts, pacstrap does not reliably set this up for the target.
+        # Install the configuration the bootstrap used, unconditionally.  The
+        # target's own copy, whether written by pacstrap or left over from a
+        # restored cache, is host dependent and on a Debian/MX host has no
+        # [mxarch] section, which is what the flavour package lists need.
+        if [[ -r "$pacman_conf_src" && -r "$mirror_src" ]]; then
+            say "Install $(pq "$PACMAN_CONF") in target"
             $SUDO mkdir -p "$sqfs_dir/etc/pacman.d"
-            $SUDO cp "$mirror_src" "$sqfs_dir/etc/pacman.d/mirrorlist"
+            $SUDO cp "$mirror_src"      "$sqfs_dir/etc/pacman.d/mirrorlist"
             $SUDO cp "$pacman_conf_src" "$sqfs_dir/etc/pacman.conf"
-            if ! $SUDO grep -q '^\[extra\]' "$sqfs_dir/etc/pacman.conf"; then
-                fatal "Target pacman.conf is missing repository sections (e.g. [extra]). Check $(pqw "$PACMAN_CONF")"
-            fi
+        else
+            # Arch host whose PACMAN_CONF/PACMAN_MIRRORLIST are unreadable:
+            # fall back to its own files.
+            say "Copying host pacman.conf and mirrorlist to target"
+            $SUDO mkdir -p "$sqfs_dir/etc/pacman.d"
+            $SUDO cp "/etc/pacman.conf"         "$sqfs_dir/etc/pacman.conf"
+            $SUDO cp "/etc/pacman.d/mirrorlist" "$sqfs_dir/etc/pacman.d/mirrorlist"
+        fi
+        if ! $SUDO grep -q '^\[extra\]' "$sqfs_dir/etc/pacman.conf"; then
+            fatal "Target pacman.conf is missing repository sections (e.g. [extra]). Check $(pqw "$PACMAN_CONF")"
         fi
 
         # Avoid mkinitcpio warnings about missing vconsole config in minimal installs.
@@ -1862,7 +1870,7 @@ do_stage_4() {
 }
 
 do_stage_4_arch() {
-    say "Arch in-chroot phase (experimental)"
+    say "Arch in-chroot phase"
 
     require_programs pacman locale-gen mkinitcpio useradd usermod groupadd chpasswd ln systemctl pacman-key mount df awk find
 
@@ -1973,21 +1981,8 @@ do_stage_4_arch() {
         # Trust the MX Arch repository's signing key. It is not part of
         # archlinux-keyring, and the -Syu below reads that repository's database,
         # so the key has to be in place first or pacman rejects it as an invalid
-        # signature. Idempotent: skipped once the key is already known.
-        : "${MXARCH_KEY_ID:=442D90008FE173AE}"
-        : "${MXARCH_KEY_URL:=https://arch.mxrepo.com/os/x86_64/mxarch.key}"
-        if ! pacman-key --list-keys "$MXARCH_KEY_ID" &>/dev/null; then
-            say "Import the MX Arch repository signing key"
-            if curl -fsSL "$MXARCH_KEY_URL" -o /tmp/mxarch.key; then
-                pacman-key --add /tmp/mxarch.key 2>&1 | tr '\r' '\n'
-                (( ${PIPESTATUS[0]} == 0 )) || error "pacman-key --add failed for the MX Arch key"
-                pacman-key --lsign-key "$MXARCH_KEY_ID" 2>&1 | tr '\r' '\n'
-                (( ${PIPESTATUS[0]} == 0 )) || error "pacman-key --lsign-key failed for $MXARCH_KEY_ID"
-                rm -f /tmp/mxarch.key
-            else
-                error "Could not fetch the MX Arch repository key from $MXARCH_KEY_URL"
-            fi
-        fi
+        # signature.
+        import_mxarch_key
         # For -Syu we do not need --needed, but it's harmless; keep the wrapper
         # to guarantee --noconfirm and mount setup.
         arch_pacman -Syu
@@ -2071,9 +2066,14 @@ do_stage_4_arch() {
     fi
 
      if do_part 9 "Enable common live services"; then
-         if [[ -e /usr/lib/systemd/system/NetworkManager.service ]]; then
-             systemctl enable NetworkManager.service 2>&1 | tr '\r' '\n'
-         fi
+         # open-vm-tools ships its units disabled; both carry
+         # ConditionVirtualization=vmware, so they stay inactive elsewhere.
+         local unit
+         for unit in NetworkManager.service vmtoolsd.service vmware-vmblock-fuse.service; do
+             if [[ -e /usr/lib/systemd/system/$unit ]]; then
+                 systemctl enable "$unit" 2>&1 | tr '\r' '\n'
+             fi
+         done
          end_part_lax
      fi
 
@@ -2181,40 +2181,9 @@ do_stage_4_arch() {
             error "AUR installation requires user '$aur_user' (should be created in Part 17)"
         fi
 
-        # Check if paru is available
-        if ! command -v paru >/dev/null 2>&1; then
-            say "paru not found, bootstrapping from AUR..."
-
-            # Install base-devel if not present (needed for makepkg)
-            if ! pacman -Qq base-devel >/dev/null 2>&1; then
-                arch_pacman -S --needed base-devel git
-            fi
-
-            # Create build directory
-            local paru_build_dir="/tmp/paru-build"
-            mkdir -p "$paru_build_dir"
-            chown "$aur_user:$aur_user" "$paru_build_dir"
-
-            # Clone and build paru-bin (binary release, faster to build)
-            say "Cloning paru-bin from AUR..."
-            sudo -u "$aur_user" git clone --depth=1 https://aur.archlinux.org/paru-bin.git "$paru_build_dir/paru-bin"
-
-            say "Building paru-bin..."
-            (
-                cd "$paru_build_dir/paru-bin" || exit
-                sudo -u "$aur_user" makepkg -si --noconfirm 2>&1 | tr '\r' '\n'
-                exit "${PIPESTATUS[0]}"
-            )
-            local makepkg_ret=$?
-
-            rm -rf "${paru_build_dir:?}"
-
-            (( makepkg_ret == 0 )) || error "Failed to build/install paru"
-            if ! command -v paru >/dev/null 2>&1; then
-                error "Failed to bootstrap paru"
-            fi
-            say "paru bootstrapped successfully"
-        fi
+        # paru comes from [mxarch] through package.list, installed before this part.
+        command -v paru >/dev/null 2>&1 \
+            || error "paru is not installed: add it to package.list (it comes from [mxarch])"
 
         # shellcheck disable=SC2206,SC2207
         local aur_pkgs=( $(compile_pkg_list aur-packages exclude-chroot) )
@@ -2875,6 +2844,15 @@ do_stage_6() {
     # (0) Populate iso dir with boilerplate files
     # (1) Copy flavour-dependent bootloader.cfg files via inheritance
 
+    # The boot file set is replaced as a whole: an existing iso dir (earlier
+    # run) must not keep old boot files the new template no longer has -
+    # e.g. EFI/BOOT next to the new EFI/boot, or .mod files a newer GRUB
+    # dropped (a GRUB core only works with modules of the same build)
+    if [[ $iso_dir == "$remaster_dir"/work/* ]]; then
+        $SUDO rm -rf -- "${iso_dir:?}/EFI" "$iso_dir"/boot/grub/{i386-pc,x86_64-efi,i386-efi} \
+            "$iso_dir/System" "$iso_dir/mach_kernel" || fatal "Could not clear old boot files in $(pq "$iso_dir")"
+    fi
+
     #copy correct iso folder for multi-init if present
     if [[ -d "$template/COMMON/iso-multi" ]]; then
         if [[ -e "$sqfs_dir/usr/lib/sysvinit/init" ]] && [[ -e "$sqfs_dir/usr/lib/systemd/systemd" ]]; then
@@ -3031,6 +3009,8 @@ Bootloader_Data
     else
         error "No $initrd_src/ or $initrd_src.gz found"
     fi
+
+    initrd_busybox "$initrd_dir"
 
     say "Write initrd_release file"
     write_initrd_release "$initrd_dir"
@@ -3337,7 +3317,6 @@ do_stage_7() {
     say "Ensure /etc and /usr are not group/world-writable"
     $SUDO chmod 755 "$sqfs_dir"/etc "$sqfs_dir"/usr
 
-
     if  [[ -n $zstd_override ]]; then
         COMPRESSION_TYPE="zstd"
         COMPRESSION_TYPE_CODE="-comp zstd -Xcompression-level 15 -b 262144"
@@ -3501,7 +3480,7 @@ do_stage_8() {
         fi
         local mkrescue_result=$?
 
-        [[ $mkrescue_result -eq 0 ]] || error "iso file creation failed"
+        [[ $mkrescue_result -eq 0 ]] || fatal "grub-mkrescue failed to create $(pq "$full_iso_file")"
         size=$(du_size "$full_iso_file")
         end_timer "create $(pqn "$size") iso file"
 
@@ -3537,9 +3516,7 @@ do_stage_8() {
     chown_opts="-uid 0 -gid 0"
     say "Using $(pq "$(basename "$MAKE_ISO")") to make iso file"
     if [[ -z ${MAKE_ISO%%*xorriso} ]]; then
-        $SUDO chown -R root:root "$iso_dir"
         make_xorriso_iso "$MAKE_ISO" "$full_iso_file" "$iso_dir"
-        $SUDO chown -R $UID "$iso_dir"
 
     elif has_option "$MAKE_ISO" -e; then
         make_uefi_iso "$MAKE_ISO" "$chown_opts -e" "$full_iso_file" "$iso_dir"
@@ -3552,9 +3529,10 @@ do_stage_8() {
         $MAKE_ISO -l -V antiXlive -R -J -pad -no-emul-boot -boot-load-size 4  \
             -boot-info-table -gid 0 -uid 0 -b boot/isolinux/isolinux.bin      \
             -c boot/isolinux/isolinux.cat -o "$full_iso_file" "$iso_dir" 2>&1 \
-            || error "iso file creation failed"
+            || fatal "Could not create ISO $(pq "$full_iso_file")"
 
-            isohybrid "$full_iso_file"
+        require_programs isohybrid
+        isohybrid "$full_iso_file" || fatal "isohybrid failed for $(pq "$full_iso_file")"
     fi
 
     size=$(du_size "$full_iso_file")
@@ -4562,59 +4540,154 @@ has_option() {
 
 make_uefi_iso() {
     local prog=$1 uefi=$2  file=$3 dir=$4
+    require_programs isohybrid
     local -a cmd=("$prog" -l -V antiXlive -R -J -pad -no-emul-boot
     -boot-load-size 4  -boot-info-table -b boot/isolinux/isolinux.bin
     -eltorito-alt-boot "$uefi" boot/grub/efi.img -no-emul-boot
     -quiet -c boot/isolinux/isolinux.cat -o "$file" "$dir")
 
     echo "${cmd[*]}"
-    "${cmd[@]}" 2>&1 || error "iso file creation failed"
-    isohybrid --uefi "$file"
+    "${cmd[@]}" 2>&1 || fatal "Could not create ISO $(pq "$file")"
+    isohybrid --uefi "$file" || fatal "isohybrid failed for $(pq "$file")"
 }
 
+# isolinux's hybrid MBR boot code (package isolinux / syslinux)
+find_isohdpfx() {
+    local f
+    for f in /usr/lib/ISOLINUX/isohdpfx.bin /usr/lib/syslinux/bios/isohdpfx.bin \
+             /usr/lib/syslinux/isohdpfx.bin /usr/share/syslinux/isohdpfx.bin; do
+        [[ -f $f ]] && { echo "$f"; return 0; }
+    done
+    return 1
+}
+
+#------------------------------------------------------------------------------
+# make_xorriso_iso PROG FILE DIR
+# One native xorriso run makes the hybrid ISO: DVD + USB stick, BIOS + UEFI.
+# No separate isohybrid step. The boot files come from the template
+# (boot/grub/boot-files/MANIFEST; Tools/live-boot-files/README-LIVE-BOOT-FILES.txt).
+#   BIOS: isolinux (default), or GRUB's eltorito.img with --grub-only
+#   UEFI: boot/grub/efi.img as El Torito image and as EFI partition
+#   Intel Macs: automatically when the set has
+#         System/Library/CoreServices/boot.efi (mk-boot-files --mac)
+#------------------------------------------------------------------------------
 make_xorriso_iso() {
-    if [[ "$GRUB_ONLY" = "true" ]]; then
-        make_xorriso_iso_grub_only "$@"
-        return
+    local prog=$1 file=$2 dir=$3
+    local label="${ISO_LABEL:-$DISTRO_NAME-Live}"
+    local mbr
+
+    local -a cmd=(
+        "$prog"
+        -report_about UPDATE                     # progress, no chatter
+        -outdev "$file"                          # write the new ISO to this file
+        -blank as_needed                         # replace an existing file
+        -volid "$label"                          # volume label (max 32 chars)
+        -joliet on                               # + Joliet names (Windows)
+        -compliance iso_9660_level=3:no_emul_toc # files > 4 GiB allowed (linuxfs);
+                                                 # no emulated TOC (as -as mkisofs)
+        -padding included                        # padding inside the image: the
+                                                 # backup GPT ends up in the last sector
+        -map "$dir" /                            # the iso dir -> ISO root
+        -chown_r 0 / --                          # owner root ...
+        -chgrp_r 0 / --                          # ... and group root
+    )
+
+    # Intel Macs (grub-mkrescue style), only when the set has the Mac files
+    if [[ -f $dir/System/Library/CoreServices/boot.efi ]]; then
+        cmd+=(
+            -hfsplus on                          # + an HFS+ filesystem (Macs read it)
+            -boot_image any apm_block_size=2048  # + Apple Partition Map
+            -find /System/Library/CoreServices/boot.efi
+                -exec set_hfs_bless intel_bootfile --
+                                                 # "bless": the file the Mac boots
+        )
+        # name in the Mac boot picker - only if present (xorriso aborts on a missing path)
+        [[ -f $dir/System/Library/CoreServices/.disk_label ]] && cmd+=(
+            -find /System/Library/CoreServices/.disk_label
+                -exec set_hfs_crtp chrp tbxj --
+        )
     fi
-    local prog=$1 file=$2 dir=$3
-    local label="${ISO_LABEL:-$DISTRO_NAME-Live}"
-    local -a opts=("-hfsplus" "on" "-as" "mkisofs" "-quiet" "-l"
-                   "-R" "-J" "-iso-level" "3" "-pad" "-partition_cyl_align" "on"
-                   "-c" "boot/isolinux/isolinux.cat"
-                   "-b" "boot/isolinux/isolinux.bin"
-                   "-no-emul-boot" "-boot-load-size" "4" "-boot-info-table"
-                   "-eltorito-alt-boot" "-e" "boot/grub/efi.img" "-no-emul-boot"
-                   "-isohybrid-apm-hfsplus" "-isohybrid-gpt-basdat")
 
-    local -a cmd=("$prog" "${opts[@]}" -V "$label" -o "$file" "$dir")
+    # Boot: first El Torito entry (BIOS) + MBR boot code for USB sticks
+    if [[ "$GRUB_ONLY" = "true" ]]; then
+        [[ -f $dir/boot/grub/i386-pc/eltorito.img ]] \
+            || error "--grub-only: boot/grub/i386-pc/eltorito.img is missing in the template"
+        mbr=$dir/boot/grub/i386-pc/boot_hybrid.img
+        [[ -f $mbr ]] || error "--grub-only: boot/grub/i386-pc/boot_hybrid.img is missing in the template"
+        # no isolinux on this ISO: drop the "Switch to Syslinux" menu entries
+        $SUDO sed -i '/^[^#]*switch_to_syslinux/s/^/#/' "$dir"/boot/grub/config/bootmenu.cfg
+        cmd+=(
+            -boot_image grub grub2_mbr="$mbr"    # GRUB's MBR boot code -> BIOS from USB
+                                                 # (same GRUB build as eltorito.img)
+            -boot_image any partition_table=on   # MBR partition table
+            -boot_image any cat_path=/boot/grub/boot.cat
+                                                 # El Torito boot catalog file
+            -boot_image grub bin_path=/boot/grub/i386-pc/eltorito.img
+                                                 # BIOS from DVD: start GRUB
+            -boot_image grub grub2_boot_info=on  # patch the image location into
+                                                 # eltorito.img and the MBR code
+        )
+    else
+        mbr=$(find_isohdpfx) || error "isohdpfx.bin not found (package isolinux)"
+        cmd+=(
+            -boot_image isolinux system_area="$mbr"
+                                                 # MBR boot code -> BIOS from USB
+            -boot_image isolinux partition_table=on
+                                                 # MBR partition table (isohybrid style)
+            -boot_image any cat_path=/boot/isolinux/isolinux.cat
+                                                 # El Torito boot catalog file
+            -boot_image isolinux bin_path=/boot/isolinux/isolinux.bin
+                                                 # BIOS from DVD: start isolinux
+        )
+    fi
+    cmd+=(
+        -boot_image any emul_type=no_emulation   # BIOS image: no floppy emulation
+        -boot_image any load_size=2048           # BIOS loads 2 KiB (4 sectors)
+        -boot_image any boot_info_table=on       # patch a boot info table into it
+    )
+
+    # Boot: second El Torito entry (UEFI) + EFI partition for USB sticks
+    cmd+=(
+        -boot_image any next                     # start the next El Torito entry
+        -boot_image any efi_path=/boot/grub/efi.img
+                                                 # UEFI from DVD: the FAT image
+    )
+    if [[ "$GRUB_ONLY" = "true" ]]; then
+        cmd+=(
+            -append_partition 2 0xef "$dir/boot/grub/efi.img"
+                                                 # UEFI from USB: copy of efi.img as
+                                                 # MBR partition 2, type EFI
+        )
+    else
+        cmd+=(
+            -boot_image isolinux partition_entry=gpt_basdat
+                                                 # UEFI from USB: efi.img as a
+                                                 # partition (GPT + MBR)
+        )
+    fi
+
+    # Partition layout
+    cmd+=(
+        -boot_image any partition_offset=16      # partition 1 at 32 KiB (sector 64), not
+                                                 # over MBR/GPT: clean for fdisk/parted
+        -boot_image any partition_cyl_align=off  # no padding to a cylinder size
+        -boot_image any iso_mbr_part_type=0x00   # MBR type of partition 1 (as Debian)
+    )
+
+    # -outdev does not truncate an existing file: an old, bigger ISO of the
+    # same name would keep its tail (and the checksums would cover it)
+    rm -f -- "$file" 2>/dev/null || $SUDO rm -f -- "$file" || fatal "Could not remove existing ISO $(pq "$file")"
+
     echo "${cmd[*]}"
-
-    "${cmd[@]}" 2>&1 || error "iso file creation failed"
-    isohybrid --uefi "$file"
-}
-
-make_xorriso_iso_grub_only() {
-    #currently experimental
-    #generate eltorito.img
-    $SUDO grub-mkimage -O i386-pc-eltorito -o "$work_dir"/iso/boot/grub/i386-pc/eltorito.img     -p /boot/grub biosdisk iso9660 search test loadenv
-    #comment out syslinux menus
-    $SUDO sed -i '/^[^#]*switch_to_syslinux/s/^/#/' "$work_dir"/iso/boot/grub/config/bootmenu.cfg
-    local prog=$1 file=$2 dir=$3
-    local label="${ISO_LABEL:-$DISTRO_NAME-Live}"
-    local -a opts=("-hfsplus" "on" "-as" "mkisofs" "-quiet" "-l"
-                   "-R" "-J" "-iso-level" "3" "-pad" "-partition_cyl_align" "on"
-                   "-b" "boot/grub/i386-pc/eltorito.img"
-                   "-no-emul-boot" "-boot-load-size" "4" "-boot-info-table" "--grub2-boot-info"
-                   "-eltorito-alt-boot" "-e" "boot/grub/efi.img" "-no-emul-boot"
-                   "-isohybrid-apm-hfsplus" "-isohybrid-gpt-basdat")
-
-    local -a cmd=("$prog" "${opts[@]}" -V "$label" -o "$file" "$dir")
-    echo "${cmd[*]}"
-
-    "${cmd[@]}" 2>&1 || error "iso file creation failed"
-    #isohybrid not needed for grub2 legacy boot
-    #isohybrid --uefi "$file"
+    local status=0
+    $SUDO chown -R root:root "$dir"
+    "${cmd[@]}" 2>&1 || status=$?
+    $SUDO chown -R "$UID" "$dir"
+    if (( status != 0 )); then
+        rm -f -- "$file" 2>/dev/null || $SUDO rm -f -- "$file" \
+            || fatal "xorriso exited with status $status and could not remove incomplete ISO $(pq "$file")"
+        fatal "xorriso exited with status $status while creating $(pq "$file")"
+    fi
 }
 
 unpack_gfx_cpio() {
@@ -5999,7 +6072,7 @@ require_programs_fatal() {
 
 require_arch_host_tools() {
     local missing
-    missing=$(missing_programs pacstrap pacman pacman-key makepkg grub-mkrescue xorriso mformat mcopy)
+    missing=$(missing_programs pacstrap pacman pacman-key makepkg grub-mkrescue xorriso mformat mcopy curl)
     [[ -z $missing ]] && return 0
 
     local hint=""
@@ -6043,6 +6116,9 @@ require_arch_host_tools() {
         fi
         if [[ $missing =~ (^|[[:space:]])(mformat|mcopy)($|[[:space:]]) ]]; then
             hint="${hint:+$hint; }For mformat/mcopy try: sudo apt install mtools"
+        fi
+        if [[ $missing =~ (^|[[:space:]])curl($|[[:space:]]) ]]; then
+            hint="${hint:+$hint; }For curl (fetches the MX Arch signing key) try: sudo apt install curl"
         fi
     fi
     fatal "Missing these required programs: $(pqw "$missing").${hint:+ $hint}"
@@ -6109,6 +6185,47 @@ ensure_archlinux_keyring_layout() {
         fi
     done
     [[ -r "$arch_keyrings/archlinux.gpg" ]]
+}
+
+#------------------------------------------------------------------------------
+# import_mxarch_key
+# Trust the MX Arch repository signing key in the pacman keyring.  The key is not
+# part of archlinux-keyring, so every pacman run that syncs the [mxarch]
+# repository database fails with `key "<id>" is unknown` (pacman then tries, and
+# also fails, to look the key up on a keyserver) until the key is added and
+# locally signed.  Called on the host as well as inside the chroot because
+# pacstrap verifies the synced databases against the *host* keyring.
+# Idempotent: skipped once the key is already in the keyring.
+#------------------------------------------------------------------------------
+import_mxarch_key() {
+    local key_file
+    : "${MXARCH_KEY_ID:=442D90008FE173AE}"
+    : "${MXARCH_KEY_URL:=https://arch.mxrepo.com/os/x86_64/mxarch.key}"
+
+    $SUDO pacman-key --list-keys "$MXARCH_KEY_ID" &>/dev/null && return 0
+
+    say "Import the MX Arch repository signing key"
+    key_file=$(mktemp) || fatal "Could not create a temp file for the MX Arch key"
+    if ! curl -fsSL "$MXARCH_KEY_URL" -o "$key_file"; then
+        rm -f "$key_file"
+        error "Could not fetch the MX Arch repository key from $MXARCH_KEY_URL"
+        return 1
+    fi
+
+    $SUDO pacman-key --add "$key_file" 2>&1 | tr '\r' '\n'
+    if (( ${PIPESTATUS[0]} != 0 )); then
+        rm -f "$key_file"
+        error "pacman-key --add failed for the MX Arch key"
+        return 1
+    fi
+
+    $SUDO pacman-key --lsign-key "$MXARCH_KEY_ID" 2>&1 | tr '\r' '\n'
+    if (( ${PIPESTATUS[0]} != 0 )); then
+        rm -f "$key_file"
+        error "pacman-key --lsign-key failed for $MXARCH_KEY_ID"
+        return 1
+    fi
+    rm -f "$key_file"
 }
 
 # Run pacstrap on a non-Arch host.  A Debian/MX archlinux-keyring snapshot can
@@ -6271,6 +6388,100 @@ get_template_file() {
 #
 # Option -o means only copy if the original file already exists
 #------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+# Add busybox and its applet links to the initrd.  Sources, first found wins:
+#  1. bin/busybox already in the Template: kept as it is
+#  2. busybox/$ISO_ARCH/template-initrd.gz in the build-iso directory
+#     (busybox/x64, busybox/386), outside the chroot: needs neither an
+#     iso-template nor the MX repos in the squashfs
+#  3. live-busybox installed in the squashfs (add it to a package list)
+#  4. template-initrd.gz of mx-iso-template (iso-template-antix on antiX)
+#     installed in the squashfs; mx-snapshot/iso-snapshot depend on it.
+#     It is the same busybox as mx-snapshot uses; since mx-iso-template
+#     26.10.2 it comes from the live-busybox package.
+# 3 and 4 come from the squashfs, so they match $ARCH.
+#------------------------------------------------------------------------------
+initrd_busybox() {
+    local dir=$1  a  n=0
+    local own=$script_dir/busybox/$ISO_ARCH/template-initrd.gz
+    local lbb=$sqfs_dir/usr/lib/live-busybox
+    local tgz=$sqfs_dir/usr/lib/iso-template/template-initrd.gz
+
+    if [[ -e $dir/bin/busybox ]]; then
+        say "Initrd: busybox from Template: $(busybox_banner "$dir/bin/busybox")"
+        return 0
+    fi
+
+    mkdir -p "$dir/bin"
+
+    if [[ -e $own ]]; then
+        busybox_from_tgz "$own" "$dir" "busybox/$ISO_ARCH" || return 1
+        busybox_check_arch "$dir/bin/busybox"
+        return 0
+    fi
+
+    if [[ -f $lbb/bin/busybox && -r $lbb/busybox.links ]]; then
+        install -m 0755 "$lbb/bin/busybox" "$dir/bin/busybox"
+        for a in $(sed 's|.*/||' "$lbb/busybox.links"); do
+            [[ -e $dir/bin/$a || -L $dir/bin/$a ]] && continue
+            ln -s busybox "$dir/bin/$a" && n=$((n + 1))
+        done
+        say "Initrd: busybox from live-busybox: $(busybox_banner "$dir/bin/busybox"), $n applet links"
+        return 0
+    fi
+
+    if [[ -r $tgz ]]; then
+        busybox_from_tgz "$tgz" "$dir" "iso-template" || return 1
+        return 0
+    fi
+
+    error "No busybox for the initrd: put a template-initrd.gz into busybox/$ISO_ARCH/," \
+        "or install mx-iso-template (or iso-template-antix) or live-busybox in the squashfs," \
+        "or put a busybox into Template/COMMON/initrd/bin"
+    return 1
+}
+
+# Copy busybox and its applet links from bin/ of a template-initrd.gz
+busybox_from_tgz() {
+    local tgz=$1  dir=$2  label=$3  tmp=$work_dir/template-initrd  f  n=0
+
+    rm -rf "${tmp:?}"
+    mkdir -p "$tmp"
+    if ! (cd "$tmp" && zcat "$tgz" | cpio -idm --quiet 'bin/*') || ! [[ -f $tmp/bin/busybox ]]; then
+        rm -rf "${tmp:?}"
+        error "No bin/busybox in $(pqw "$tgz")"
+        return 1
+    fi
+
+    install -m 0755 "$tmp/bin/busybox" "$dir/bin/busybox"
+    for f in "$tmp"/bin/*; do
+        [[ -L $f && $(readlink "$f") = busybox ]]       || continue
+        [[ -e $dir/bin/${f##*/} || -L $dir/bin/${f##*/} ]] && continue
+        cp -P "$f" "$dir/bin/" && n=$((n + 1))
+    done
+    rm -rf "${tmp:?}"
+
+    say "Initrd: busybox from $label: $(busybox_banner "$dir/bin/busybox"), $n applet links"
+}
+
+# Warn if a busybox does not match $ISO_ARCH (32/64 bit, from the ELF header)
+busybox_check_arch() {
+    local class want
+    class=$(od -An -tu1 -j4 -N1 "$1" 2>/dev/null | tr -d ' ')
+    case $ISO_ARCH in
+        x64) want=2 ;;
+        386) want=1 ;;
+        *)   return 0 ;;
+    esac
+    [[ $class == "$want" ]] && return 0
+    warn "Initrd: busybox is $( [[ $class == 1 ]] && echo 32 || echo 64)-bit, but ISO_ARCH is $ISO_ARCH"
+}
+
+# Print the version banner of a busybox binary without running it
+busybox_banner() {
+    grep -aoE -m1 'BusyBox v[0-9][^)]*\)' "$1" | head -n1
+}
+
 copy_template_dir() {
     local sudo=$SUDO  only_overwrite
     [[ $1 == "-u" ]] && sudo="" && shift ;
@@ -6291,7 +6502,6 @@ copy_template_dir() {
             only_overwrite "$dir" "$dest"
         else
             say "Copy from Template: $(pq "$flav"/"$from")"
-            $sudo cp -R --preserve=link,mode "$dir"/* "$dest"/
             #ensure template files are read-only on group and "other" permission
             #changing the template doesn't hose up the other folders created by the system, mainly /tmp
             #this is the original method
