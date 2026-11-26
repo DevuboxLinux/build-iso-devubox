@@ -102,6 +102,7 @@ cpupower-gui
 cputool
 cpu-x
 crow-translate
+curlftpfs
 custom-toolbox
 czkawka-cli
 czkawka-gui
@@ -390,6 +391,7 @@ mesa-vulkan-drivers
 metadata-cleaner
 micro
 minder
+mmc-utils
 modem-manager-gui
 moreutils
 mousepad
@@ -511,6 +513,7 @@ pulsemixer
 pwgen
 python3-all
 python3-legacy-cgi
+python3-reportlab
 python3-xdg
 python-apt-common-devuan
 python-is-python3
@@ -548,6 +551,7 @@ quadrapassel
 quaternion
 rclone
 rclone-browser
+rdate
 rdesktop
 rdiff-backup
 rednotebook
@@ -575,6 +579,7 @@ screenkey
 scrounge-ntfs
 seahorse
 secure-delete
+sedutil
 sendemail
 simple-scan
 simplescreenrecorder
@@ -623,6 +628,7 @@ tlpui
 touche
 touchegg
 touchpad-indicator
+tpm2-tools
 transmission-common
 transmission-qt
 transume
@@ -662,6 +668,7 @@ webapp-manager
 webp-pixbuf-loader
 whiptail
 wipe
+wodim
 woeusb
 woeusb-ng
 x11vnc
