@@ -23,7 +23,8 @@ jobs:
             syslinux-utils cpio \
             grub2-common grub-pc-bin grub-efi-amd64-bin \
             mtools dosfstools rsync gnupg sudo ca-certificates \
-            pigz xz-utils lz4 zstd bc binutils procps git isolinux
+            pigz xz-utils lz4 zstd bc binutils procps git isolinux \
+            fwupd-signed
 
           wget "https://pkgmaster.devuan.org/devuan/pool/main/d/debootstrap/debootstrap_1.0.141devuan1_all.deb"
           wget "https://pkgmaster.devuan.org/devuan/pool/main/d/devuan-keyring/devuan-keyring_2025.08.09_all.deb"
