@@ -78,6 +78,13 @@ Options:
     --no-ucode          Don't inject AMD/Intel microcode into initrd.gz
     --alpha             EXPERIMENTAL build: name the iso ..._ALPHA_<timestamp>.iso
     --beta              TEST build: name the iso ..._BETA_<timestamp>.iso
+    --sign-only[=FILE]  Only sign the existing iso (or FILE) with gpg, then exit
+                        (also when SIGN_FILES is empty; see SIGN_* in defaults-system;
+                        use it with the same --user-default as the build)
+    --sign-key[=]ID     Sign with this gpg key (fingerprint or long key ID),
+                        overrides SIGN_KEY from the defaults files
+    --no-sign           Don't sign the iso in this run (overrides SIGN_FILES);
+                        sign it later with --sign-only
 
 Short options stack: -up0 == -u -p -0 == --update --pretend -0
 
@@ -100,7 +107,7 @@ main() {
 
     local chroot_stage=4
 
-    local stage output_file
+    local stage output_file chroot_marker
     local manual_mode pretend_mode auto_mode chroot_mode delete_mode delete_all
     local quiet_mode start_from reset_mode iso_only full_auto update_mode UPDATE_mode
     local show_parts show_stages interactive color_mode verbose_mode stats_mode
@@ -120,12 +127,12 @@ main() {
     local pacman_cache_dir="$remaster_dir/pacman-cache/pkg"
     local dnf_cache_dir="$remaster_dir/dnf-cache"
     local manual_selections=manual-selections
-    local exit_file="$output_dir/MUST-EXIT"
+    local exit_file
     local sign_off_file="$output_dir/SIGN-OFF"
 
     local first_time_file="$input_dir/first-time"
     local did_stage_file="$output_dir/did-stage"
-    local log_file="$output_dir/$ME.log"
+    local log_file=/dev/null
     local err_file="$output_dir/$ME.err"
     local make_xinitrc=/usr/share/antiX/lib/make-xinitrc
 
@@ -182,6 +189,11 @@ main() {
                         && fatal "Default file not found -$arg: $(pqw "$val")"
 
                     shift         ;;
+        -sign-key)  (( $# < 1 )) && fatal "Expected a parameter after: $(pqw -"$arg")"
+                    val=$1
+                    [[ $val =~ ^- ]] \
+                        && fatal "Suspicious argument after -$arg: $(pqw "$val")"
+                    shift         ;;
               *=*)  val=${arg#*=} ;;
                 *)  val="???"     ;;
         esac
@@ -223,6 +235,10 @@ main() {
              -stop5)         stop_5=true                        ;;
              -stop8)         stop_8=true                        ;;
              -grub-only)    GRUB_ONLY=true                     ;;
+             -sign-only)    sign_only=true                     ;;
+           -sign-only=*)    sign_only=true ; sign_file=$val    ;;
+  -sign-key|-sign-key=*)    sign_key_opt=$val                  ;;
+            -no-sign)    no_sign=true                       ;;
 
               [0-8]) [[ $start_from ]] && fatal "Can only set starting stage once"
                      start_from=$arg ;;
@@ -231,6 +247,14 @@ main() {
                   *) fatal "Unknown parameter -$arg" ;;
         esac
     done
+
+    # Parse all options before enabling writes, including on invalid invocations.
+    if [[ -z $pretend_mode ]]; then
+        exit_file="$output_dir/MUST-EXIT"
+        log_file="$output_dir/$ME.log"
+    fi
+
+    [[ -n $no_sign && -n $sign_only ]] && fatal "Use either --no-sign or --sign-only, not both"
 
     is_antiX && apt_yes=
 
@@ -300,20 +324,6 @@ main() {
     SUDO=sudo
     (( UID == 0 )) && SUDO=
 
-    # Speed up failed loopback connections during package installs: some
-    # postinst scripts poll a service (e.g. cups) that isn't running in the
-    # chroot, and on some hosts (seen on WSL2) a closed IPv4 loopback port
-    # doesn't get an instant refusal, so the default SYN-retry timeout can
-    # stretch a failed connect out to ~2 minutes. Lower it for the duration
-    # of this build; restored in on_exit(). Only the top-level (non-chroot)
-    # invocation does this -- the re-invoked chroot process (stage 4+) would
-    # otherwise restore it prematurely when *it* exits.
-    if [[ "$script_dir" != "$build_dir" ]]; then
-        ORIG_TCP_SYN_RETRIES=$(cat /proc/sys/net/ipv4/tcp_syn_retries 2>/dev/null)
-        [[ -n $ORIG_TCP_SYN_RETRIES ]] \
-            && $SUDO sysctl -q -w net.ipv4.tcp_syn_retries=2 2>/dev/null
-    fi
-
     [[ -n $show_parts || -n $show_stages ]] && exit
 
     local normal_defaults="$input_dir/defaults $input_dir/defaults-local"
@@ -333,7 +343,7 @@ main() {
         [[ ${DISTRO_FAMILY:-debian} = debian ]] && work_name="$work_name-$DEBIAN_RELEASE"
         [[ "$DISTRO_NAME" = antiX ]] && work_name="$work_name-$ISO_FLAV"
         output_dir="$script_dir/Output/$work_name"
-        log_file="$output_dir/$ME.log"
+        [[ -n $pretend_mode ]] || log_file="$output_dir/$ME.log"
         err_file="$output_dir/$ME.err"
         did_stage_file="$output_dir/did-stage"
     }
@@ -395,13 +405,29 @@ main() {
 
     # In auto mode we need to cache sudo credentials to avoid mid-build prompts
     # (or run as root) to avoid confusing mid-build failures.
-    if (( UID != 0 )) && [[ -n $auto_mode ]]; then
+    if (( UID != 0 )) && [[ -n $auto_mode && -z $pretend_mode ]]; then
         sudo true >/dev/null 2>&1 \
             || fatal "$(pq --auto) requires sudo access (or run as root)"
     fi
 
-    trap on_exit       EXIT
+    local ORIG_TCP_SYN_RETRIES=
+    [[ -n $pretend_mode ]] || trap on_exit EXIT
     trap "echo; exit"  INT
+
+    # Speed up failed loopback connections during package installs: some
+    # postinst scripts poll a service (e.g. cups) that isn't running in the
+    # chroot, and on some hosts (seen on WSL2) a closed IPv4 loopback port
+    # doesn't get an instant refusal, so the default SYN-retry timeout can
+    # stretch a failed connect out to ~2 minutes. Lower it for the duration
+    # of this build; restored in on_exit(). Only the top-level (non-chroot)
+    # invocation does this -- the re-invoked chroot process (stage 4+) would
+    # otherwise restore it prematurely when *it* exits.  Not needed for
+    # --sign-only.
+    if [[ "$script_dir" != "$build_dir" && -z $sign_only && -z $pretend_mode ]]; then
+        ORIG_TCP_SYN_RETRIES=$(cat /proc/sys/net/ipv4/tcp_syn_retries 2>/dev/null)
+        [[ -n $ORIG_TCP_SYN_RETRIES ]] \
+            && $SUDO sysctl -q -w net.ipv4.tcp_syn_retries=2 2>/dev/null
+    fi
 
     if [[ -n $pretend_mode || -n $chroot_mode || -n $stats_mode ]]; then
         log_file=/dev/null
@@ -409,7 +435,7 @@ main() {
         mkdir -p "$(dirname "$log_file")"
     fi
 
-    if [[ -n $check_tmpfs ]]; then
+    if [[ -n $check_tmpfs && -z $pretend_mode ]]; then
         check_all_tmpfs && exit
         vexit "No tmpfs mounts were found"
     fi
@@ -424,19 +450,69 @@ main() {
         echo -e "directory: $script_dir\n"
     } >> "$log_file"
 
-    # Always start out with a clean slate
-    rm -f "$exit_file" "$sign_off_file"
+    if [[ -z $pretend_mode ]]; then
+        rm -f "$exit_file" "$sign_off_file"
+    fi
 
-    update_template_file basic-applications.list basic-package.list
-    update_template_file pesky-packages.list     pesky-package.list
+    # --sign-only: sign the existing iso as at the end of stage 8, then exit
+    if [[ -n $sign_only ]]; then
+        local f sign_iso
+        for f in "$output_dir"/stage-[0-8].out; do
+            # shellcheck disable=SC1090
+            [[ -r $f ]] && source "$f"
+        done
+        if [[ -n $sign_file ]]; then
+            sign_iso=$sign_file
+        elif [[ -L $output_dir/last-built.iso ]]; then
+            sign_iso=$(readlink -- "$output_dir/last-built.iso") || fatal "Could not read the last ISO path"
+        elif [[ -f $output_dir/stage-8.out ]]; then
+            # Builds made before the output path was recorded.
+            sign_iso="$DISTRO_NAME-${DISTRO_VERSION}_$ISO_ARCH"
+            sign_iso="${sign_iso// /_}"
+            [[ "$DISTRO_NAME" = antiX ]] && sign_iso="$sign_iso-$ISO_FLAV"
+            sign_iso=$iso_file_dir/$sign_iso${ISO_SUFFIX:+_$ISO_SUFFIX}.iso
+        fi
+        if [[ -z $sign_iso ]]; then
+            _say_ "No successfully mastered ISO recorded. Use --sign-only=FILE."
+            exit 1
+        fi
+        if [[ -n $pretend_mode ]]; then
+            if [[ ! -f $sign_iso ]]; then
+                _say_ "No iso file to sign: $(pqw "$sign_iso")"
+                exit 1
+            fi
+            say "Would refresh the checksum and sign $(pqw "$sign_iso")"
+            exit 0
+        fi
+        [[ -f $sign_iso ]] || fatal "No iso file to sign: $(pqw "$sign_iso")"
+        # Always hash the current ISO, even when an older checksum exists.
+        # Build outputs may be root-owned, so publish with the signing helper.
+        local checksum_tmp checksum_msg
+        checksum_tmp=$(mktemp) || fatal "Could not create a temporary checksum file"
+        if ! (cd "$(dirname "$sign_iso")" && sha256sum "$(basename "$sign_iso")") > "$checksum_tmp"; then
+            rm -f "$checksum_tmp"
+            fatal "Could not checksum $(pqw "$sign_iso")"
+        fi
+        if ! checksum_msg=$(sign_put "$checksum_tmp" "$sign_iso.sha256" "$sign_iso"); then
+            rm -f "$checksum_tmp"
+            fatal "Could not write checksum: $checksum_msg"
+        fi
+        rm -f "$checksum_tmp"
+        SIGN_FILES=true sign_iso_files "$sign_iso"
+        my_exit 0
+    fi
+
+    if [[ -z $pretend_mode ]]; then
+        update_template_file basic-applications.list basic-package.list
+        update_template_file pesky-packages.list     pesky-package.list
+        : > "$did_stage_file"
+    fi
 
     [[ -n $update_mode ]] && say "update mode: skipping parts $(pq "$SKIP_PART")"
 
     # shellcheck disable=SC2086
     expand_parts $part_env $stage_env
 
-    # Clear out the did-stage file
-    : > "$did_stage_file"
     # We only advance to the next stage if the previous stages all completed and wrote
     # stage-N.out output files. These files are also used for passing information on
     # from one stage to the next.
@@ -470,20 +546,17 @@ main() {
 
         local initrd_dir="$work_dir/initrd"
 
-        # Ensure convenience links are correct for current build
-        convenience_link "$work_dir"   work
-        convenience_link "$sqfs_dir"   sqfs
-        convenience_link "$iso_dir"    iso
-        convenience_link "$initrd_dir" initrd
+        if [[ -z $pretend_mode ]]; then
+            convenience_link "$work_dir"   work
+            convenience_link "$sqfs_dir"   sqfs
+            convenience_link "$iso_dir"    iso
+            convenience_link "$initrd_dir" initrd
+        fi
 
         local chroot_cache_opts="chroot $work_name $sqfs_dir"
         local deboot_cache_opts
         if [[ ${DISTRO_FAMILY:-debian} = arch ]]; then
             deboot_cache_opts="pacstrap $ARCH $sqfs_dir"
-        elif [[ ${DISTRO_FAMILY:-debian} = fedora ]]; then
-            deboot_cache_opts="dnf_bootstrap $ARCH $sqfs_dir"
-        else
-            deboot_cache_opts="debootstrap $ARCH-$DEBIAN_RELEASE $sqfs_dir"
         fi
 
         # Select template root for all stages (not just Stage 0).
@@ -498,7 +571,7 @@ main() {
         local manual_selections_template=$template/COMMON/$manual_selections
 
         # Do weird modes here after variables are set
-        [[ -n $chroot_mode ]] && do_chroot && exit
+        [[ -n $chroot_mode && -z $pretend_mode ]] && do_chroot && exit
 
         if [[ -n $start_from ]]; then
             (( stage < start_from )) \
@@ -507,8 +580,8 @@ main() {
             clear_outputs "$start_from" "$pretend_mode" "$delete_mode" || exit
             start_from=
         fi
-        [[ -n $save_mode    ]] && do_save    && exit
         [[ -n $pretend_mode ]] && do_pretend && exit
+        [[ -n $save_mode    ]] && do_save    && exit
         [[ -n $stats_mode   ]] && do_stats   && exit
         [[ -n $UPDATE_mode  ]] && update_add_remove_lists && exit
 
@@ -659,7 +732,12 @@ Remaster_Blurb
 
     # Distro-specific tool requirements (outer build environment)
     case $DISTRO_FAMILY in
-        debian) require_programs debootstrap apt-get dpkg ;;
+        debian)
+            require_programs debootstrap apt-get dpkg
+            if [[ $MAKE_ISO == *xorriso && $GRUB_ONLY != true && -z $stop_5 && -z $stop_8 ]] \
+                && ! has_word SKIP_STAGE 8; then
+                require_isohdpfx
+            fi ;;
           arch) require_arch_host_tools ;;
         fedora) require_fedora_host_tools ;;
     esac
@@ -869,6 +947,8 @@ do_stage_1() {
 do_stage_2() {
     enter_stage 2 "Bootstrap root filesystem"
 
+    umount_chroot
+
     if [[ ${DISTRO_FAMILY:-debian} = arch ]]; then
         say "Using pacstrap (Arch)"
 
@@ -1012,19 +1092,32 @@ do_stage_2() {
             $SUDO rm -rf "$(dirname "${sqfs_dir:?}")"/squashfs/*
         fi
 
+        : "${DNF_RELEASEVER:=44}"
+        local release_key="$script_dir/Input/fedora/RPM-GPG-KEY-fedora-$DNF_RELEASEVER-primary"
+        [[ $DNF_RELEASEVER =~ ^[0-9]+$ && -s $release_key ]] || fatal "Missing trusted Fedora $DNF_RELEASEVER signing key"
+        local trust_marker="$sqfs_dir/var/lib/build-iso/fedora-bootstrap-key"
+        local key_hash
+        key_hash=$(sha256sum < "$release_key") || fatal "Cannot read Fedora signing key"
+        key_hash=${key_hash%% *}
+        local -a fedora_cache=(dnf_bootstrap "$ARCH-$DNF_RELEASEVER-$key_hash" "$sqfs_dir")
+
+        # Full chroot caches can also originate from an older unsigned bootstrap.
         # shellcheck disable=SC2086
         if restore_cache $chroot_cache_opts; then
-            leave_stage
-            return
+            if grep -Fxq -- "$key_hash" "$trust_marker" 2>/dev/null; then
+                leave_stage
+                return
+            fi
+            say "Discarding chroot cache without a verified Fedora $DNF_RELEASEVER bootstrap"
+            check_sqfs_dir
+            $SUDO find "$sqfs_dir" -mindepth 1 -delete || fatal "Could not clear obsolete Fedora cache"
         fi
 
-        # shellcheck disable=SC2086
-        if ! restore_cache $deboot_cache_opts; then
+        if ! restore_cache "${fedora_cache[@]}"; then
             umount_chroot
             check_errors_strict
             start_timer
 
-            : "${DNF_RELEASEVER:=44}"
             : "${DNF_BOOTSTRAP_PACKAGES:=filesystem fedora-release kernel-core dracut dracut-live squashfs-tools glibc bash coreutils systemd dnf rpm shadow-utils gawk}"
             : "${DNF_CONF:=Input/fedora/dnf.conf}"
             : "${DNF_BASEREPO:=Input/fedora/fedora.repo}"
@@ -1035,12 +1128,13 @@ do_stage_2() {
             [[ -r "$repo_src" ]] || fatal "Missing DNF_BASEREPO: $(pqw "$DNF_BASEREPO")"
 
             local dnf_work=$work_dir/dnf
-            $SUDO mkdir -p "$dnf_work"
             local dnf_conf=$dnf_work/dnf.conf
             local yum_repos_dir=$dnf_work/yum.repos.d
-            $SUDO mkdir -p "$yum_repos_dir"
-            $SUDO cp "$repo_src" "$yum_repos_dir/fedora.repo"
-            $SUDO cp "$dnf_conf_src" "$dnf_conf"
+            $SUDO install -Dm644 "$repo_src" "$yum_repos_dir/fedora.repo" || fatal "Cannot stage Fedora repositories"
+            $SUDO install -m644 "$dnf_conf_src" "$dnf_conf" || fatal "Cannot stage DNF configuration"
+
+            $SUDO mkdir -p "$sqfs_dir" || fatal "Cannot create Fedora installroot"
+            $SUDO rpm --root "$sqfs_dir" --import "$release_key" || fatal "Cannot import Fedora signing key"
 
             say "dnf --installroot to $(pq "$sqfs_dir") with: $(pq $DNF_BOOTSTRAP_PACKAGES)"
 
@@ -1050,15 +1144,20 @@ do_stage_2() {
                 --setopt=reposdir="$yum_repos_dir" \
                 --installroot="$sqfs_dir" \
                 --setopt=cachedir="$sqfs_dir/var/cache/dnf" \
-                --nogpgcheck \
+                --setopt=localpkg_gpgcheck=1 \
+                --setopt=gpgcheck=1 \
+                --setopt='*.gpgcheck=1' \
+                --setopt='*.gpgkey=' \
                 --assumeyes \
                 install $DNF_BOOTSTRAP_PACKAGES 2>&1 | tr '\r' '\n'
             local dnf_ret=${PIPESTATUS[0]}
             (( dnf_ret == 0 )) || fatal "dnf --installroot failed"
 
-            # Basic post-bootstrap setup
-            # Set root password to empty (no password)
-            $SUDO sh -c "printf 'root::0:0:root:/root:/bin/bash\n' >> '$sqfs_dir/etc/passwd'"
+            # Fedora supplies the root account and its shadow password policy.
+            awk -F: '$1 == "root" { n++; if ($3 != "0") exit 1 } END { if (n != 1) exit 1 }' "$sqfs_dir/etc/passwd" \
+                || fatal "Expected exactly one Fedora root account with UID 0"
+            $SUDO install -d "${trust_marker%/*}" || fatal "Cannot create Fedora bootstrap record"
+            printf '%s\n' "$key_hash" | $SUDO tee "$trust_marker" >/dev/null || fatal "Cannot record verified Fedora bootstrap"
             $SUDO mkdir -p "$sqfs_dir/root"
 
             # Copy host resolv.conf for chroot DNS
@@ -1078,8 +1177,7 @@ do_stage_2() {
         fi
 
         report_size "$sqfs_dir"
-        # shellcheck disable=SC2086
-        create_cache $deboot_cache_opts
+        create_cache "${fedora_cache[@]}"
 
         say "Customize live system (Fedora)"
         copy_template_dir squashfs "$sqfs_dir"
@@ -1104,17 +1202,20 @@ do_stage_2() {
         return
     fi
 
-    # shellcheck disable=SC2086
-    if ! restore_cache $deboot_cache_opts; then
+    local include_list exclude_list bootstrap_hash
+    include_list=$(gather_join include-debootstrap)
+    exclude_list=$(gather_join exclude-debootstrap)
+    bootstrap_hash=$(printf '%s\n' "$include_list" "$exclude_list" | sha256sum) \
+        || fatal "Cannot hash debootstrap package lists"
+    local -a bootstrap_cache=(debootstrap "$ARCH-$DEBIAN_RELEASE-${bootstrap_hash%% *}" "$sqfs_dir")
+    if ! restore_cache "${bootstrap_cache[@]}"; then
 
         say "debootstrap for $(pq "$ARCH" "$DEBIAN_RELEASE") from local mirror $(pq "$LOCAL_MIRROR") ..."
         umount_chroot
         mount_deb_cache
 
-        local args cnt exclude_list include_list keyring url
+        local args cnt keyring url
         args="--arch=$ARCH"
-        exclude_list=$(gather_join exclude-debootstrap)
-        include_list=$(gather_join include-debootstrap)
         cnt=$(echo "$exclude_list" | tr ',' '\n' | wc -l)
         psay "$cnt" "Exclude $(pqn %n) package%s"
         keyring="$template/$ISO_RESPIN_OF/keyring.gpg"
@@ -1126,9 +1227,10 @@ do_stage_2() {
         check_errors_strict
         start_timer
         $SUDO mkdir -p "$sqfs_dir/usr" "$sqfs_dir/etc"
-        local debian_frontend_env=""
+        local debootstrap_prog=debootstrap
+        local -a debootstrap_env=()
         if [[ -n $auto_mode ]]; then
-            debian_frontend_env="DEBIAN_FRONTEND=noninteractive"
+            debootstrap_env=(DEBIAN_FRONTEND=noninteractive)
             say "Running debootstrap in noninteractive mode (auto mode enabled)..."
         else
             say "Running debootstrap in interactive mode..."
@@ -1142,15 +1244,14 @@ do_stage_2() {
         # WSL workaround: patch debootstrap to replace 'sync' with 'true' to avoid hangs
         if grep -qi microsoft /proc/version 2>/dev/null; then
             say "WSL detected: creating patched debootstrap without sync..."
-            local patched_debootstrap="$work_dir/debootstrap-no-sync"
-            $SUDO sed 's/^\tsync$/\ttrue  # sync disabled for WSL/' /usr/sbin/debootstrap > "$patched_debootstrap"
-            $SUDO chmod +x "$patched_debootstrap"
-            # shellcheck disable=SC2086
-            $SUDO $debian_frontend_env "$patched_debootstrap" $args "$DEBIAN_RELEASE" "$sqfs_dir" "$url"
-        else
-            # shellcheck disable=SC2086
-            $SUDO $debian_frontend_env debootstrap $args "$DEBIAN_RELEASE" "$sqfs_dir" "$url"
+            debootstrap_prog="$work_dir/debootstrap-no-sync"
+            sed 's/^\tsync$/\ttrue  # sync disabled for WSL/' /usr/sbin/debootstrap > "$debootstrap_prog" \
+                && chmod +x "$debootstrap_prog" || fatal "Could not prepare debootstrap for WSL"
         fi
+
+        # shellcheck disable=SC2086
+        $SUDO env "${debootstrap_env[@]}" "$debootstrap_prog" $args "$DEBIAN_RELEASE" "$sqfs_dir" "$url" \
+            || fatal "debootstrap failed for $DEBIAN_RELEASE"
 
         say "debootstrap completed, checking results..."
         end_timer "run debootstrap \"$ARCH\" \"$DEBIAN_RELEASE\""
@@ -1174,8 +1275,7 @@ do_stage_2() {
 
     report_size "$sqfs_dir"
 
-    # shellcheck disable=SC2086
-    create_cache $deboot_cache_opts
+    create_cache "${bootstrap_cache[@]}"
 
     say "Customize live system for antiX"
     $SUDO rm -f "$sqfs_dir/etc/apt/sources.list"
@@ -1194,10 +1294,6 @@ do_stage_3() {
 
     check_sqfs_dir
 
-    # We want to run stage N+1 inside the chroot so we need to signal
-    # that the current stage is done
-    leave_stage notime
-
     # Save the PARTIAL file from destruction but don't be fooled by older copies
     rm -f "$work_dir/$partial_name"
     [[ -e "$sqfs_dir$partial_file" ]] && cp "$sqfs_dir$partial_file" "$work_dir"
@@ -1207,8 +1303,8 @@ do_stage_3() {
 
     prep_chroot
 
-    # This stage must fail if the next stage fails
-    rm "$output_file"
+    # Only the inner build may advance to Stage 4 before this stage succeeds.
+    touch "$sqfs_output_dir/stage-$stage.out" || fatal "Could not prepare chroot stage marker"
 
     # Put saved PARTIAL file back in the build directory
     [[ -e "$work_dir/$partial_name" ]] \
@@ -1236,8 +1332,9 @@ do_stage_3() {
     HOST_HOSTNAME=$(hostname)
 
     local args
-    local next_output_file
+    local next_output_file chroot_status=0
     next_output_file=$sqfs_output_dir/stage-$((stage + 1)).out
+    $SUDO rm -f -- "$next_output_file" || fatal "Could not clear stale chroot stage marker"
 
     args="$args -$((stage + 1))"
     [[ -n $interactive     ]] && args="$args --interactive"
@@ -1251,13 +1348,17 @@ do_stage_3() {
 
     check_errors_strict
 
+    # dkms signing key for the modules built in the chroot (Debian only)
+    [[ ${DISTRO_FAMILY:-debian} = debian ]] && harden_dkms_key
+
     say "Run $(pq "$ME") in chroot"
     # shellcheck disable=SC2086
-    $SUDO chroot "$sqfs_dir" "$build_dir/$ME" $args
+    $SUDO chroot "$sqfs_dir" "$build_dir/$ME" $args || chroot_status=$?
 
     $SUDO hostname "$HOST_HOSTNAME"
 
-    if [[ ! -e "$next_output_file" && -n "$manual_mode" ]]; then
+    if [[ -n $manual_mode ]] && { (( chroot_status != 0 )) || [[ ! -f $next_output_file ]]; }; then
+        $SUDO rm -f -- "$next_output_file" || fatal "Could not reset chroot stage marker"
         say "The buld inside the chroot failed"
         say  "======================================================="
         say  "You are in a chroot environment."
@@ -1268,6 +1369,7 @@ do_stage_3() {
         say  "======================================================="
         $SUDO chroot "$sqfs_dir" /bin/bash -rcfile "$build_dir/bashrc" 2>&1
         say "Left chroot"
+        [[ -f $next_output_file ]] && chroot_status=0
     fi
 
     check_errors_reset
@@ -1275,7 +1377,7 @@ do_stage_3() {
     kill_chroot_procs
     umount_chroot
 
-    [[ -e "$next_output_file" ]] || fatal "Build inside chroot failed"
+    (( chroot_status == 0 )) && [[ -f $next_output_file ]] || fatal "Build inside chroot failed"
 
     local chroot_selections=$sqfs_dir$build_dir/$manual_selections
     if [[ -r "$chroot_selections" ]]; then
@@ -1291,7 +1393,7 @@ do_stage_3() {
     [[ -r "$sqfs_output_dir/package-list.out" ]] && cp "$sqfs_output_dir/package-list.out" "$work_dir"
     cp "$sqfs_input_dir/strict-exceptions.regex"  "$input_dir"
     cp "$sqfs_input_dir/lax-errors.regex"         "$input_dir"
-    cp "$next_output_file"                        "$output_dir"
+    cp "$next_output_file" "$output_dir/" || fatal "Could not copy completed chroot stage marker"
 
     leave_stage
 
@@ -1314,6 +1416,11 @@ do_stage_4() {
 
     #error-logchecking ASAP so we don't waste user's time
     [[ "$script_dir" == "$build_dir" ]] || fatal "We do not appear to be in a chroot environment"
+
+    # The stage functions write kernel data here. Publish it after the final check.
+    local chroot_marker=$output_file
+    local output_file=$chroot_marker.pending
+    : > "$output_file" || fatal "Could not prepare chroot stage data"
 
     # Set SIGN_OFF early to ensure it's available before any potential exits
     SIGN_OFF="$text_co$ME in chroot done$nc"
@@ -1375,7 +1482,7 @@ do_stage_4() {
     require_programs apt-get
 
     # Skip PARTIAL file check if we have no stage output files (clean build)
-    if [[ ! -f "$script_dir/../Output/$work_name/stage-1.out" ]] && [[ -s "$partial_file" ]]; then
+    if [[ ! -f "$output_dir/stage-1.out" ]] && [[ -s "$partial_file" ]]; then
         rm -f "$partial_file"
         skip_part 0 "Read PARTIAL file to skip parts done (clean build)"
     elif [[ -s "$partial_file" ]]  \
@@ -1536,7 +1643,7 @@ do_stage_4() {
 
         for deb in "${debs[@]}"; do
             say "install $(pq "${deb##*/}")"
-            apt-get install "$deb"
+            apt-get install "$deb" || fatal "Could not install local package: $deb"
         done
         end_part_lax
     else
@@ -1918,7 +2025,7 @@ do_stage_4_arch() {
     }
 
     # PARTIAL file support (same semantics as Debian path)
-    if [[ ! -f "$script_dir/../Output/$work_name/stage-1.out" ]] && [[ -s "$partial_file" ]]; then
+    if [[ ! -f "$output_dir/stage-1.out" ]] && [[ -s "$partial_file" ]]; then
         rm -f "$partial_file"
         skip_part 0 "Read PARTIAL file to skip parts done (clean build)"
     elif [[ -s "$partial_file" ]] && do_part 0 "!Read PARTIAL file to skip parts done"; then
@@ -2095,7 +2202,7 @@ do_stage_4_arch() {
 
         for pkg in "${arch_pkgs[@]}"; do
             say "install $(pq "${pkg##*/}")"
-            arch_pacman --overwrite='*' -U "$pkg"
+            arch_pacman --overwrite='*' -U "$pkg" || fatal "Could not install local package: $pkg"
         done
         if [[ $PACMAN_CLEAR_CACHE == true ]] && ! mountpoint -q "$PACMAN_CACHE_DIR"; then rm -rf "${PACMAN_CACHE_DIR:?}"/* 2>/dev/null; fi
         end_part_lax
@@ -2241,7 +2348,6 @@ do_stage_4_arch() {
             if command -v plymouth >/dev/null 2>&1 && ! grep -q "plymouth" "$archiso_conf"; then
                 sed -i -r 's/(HOOKS=\([^)]*block[[:space:]]+)/\1plymouth /' "$archiso_conf"
             fi
-             mkinitcpio -c "$archiso_conf" -k "$kpath" -g /boot/archiso.img 2>&1 | tr '\r' '\n'
         else
             # Fallback: synthesize a minimal archiso mkinitcpio config.
             # Avoid autodetect in chroot (it can error due to missing real rootfs metadata).
@@ -2268,17 +2374,10 @@ MKINITCPIO
                 error "archiso mkinitcpio hooks not found under /usr/lib/initcpio (install mkinitcpio-archiso?)"
             fi
 
-             if ! mkinitcpio -c "$archiso_conf" -k "$kpath" -g /boot/archiso.img 2>&1 | tr '\r' '\n'; then
-                say "mkinitcpio diagnostics:"
-                # shellcheck disable=SC2012
-                ls -la /usr/lib/initcpio/hooks 2>&1 | tail -n 30 || true
-                # shellcheck disable=SC2012
-                ls -la /usr/lib/initcpio/install 2>&1 | tail -n 30 || true
-                error "Failed to build /boot/archiso.img"
-            fi
         fi
-        chmod 0644 /boot/archiso.img 2>/dev/null || true
-        [[ -r /boot/archiso.img ]] || error "Missing /boot/archiso.img after mkinitcpio"
+
+        generate_archiso_image "$archiso_conf" "$kpath" /boot/archiso.img \
+            || fatal "Failed to build /boot/archiso.img"
         end_part_strict
     fi
 
@@ -2386,7 +2485,7 @@ do_stage_4_fedora() {
     }
 
     # PARTIAL file support
-    if [[ ! -f "$script_dir/../Output/$work_name/stage-1.out" ]] && [[ -s "$partial_file" ]]; then
+    if [[ ! -f "$output_dir/stage-1.out" ]] && [[ -s "$partial_file" ]]; then
         rm -f "$partial_file"
         skip_part 0 "Read PARTIAL file to skip parts done (clean build)"
     elif [[ -s "$partial_file" ]] && do_part 0 "!Read PARTIAL file to skip parts done"; then
@@ -2441,7 +2540,7 @@ do_stage_4_fedora() {
     local kernel_version
     kernel_version=$(find /boot/ -maxdepth 1 -name 'vmlinuz-*' 2>/dev/null | sort -V | tail -n1 | sed 's|/boot/vmlinuz-||')
     if [[ -z $kernel_version ]]; then
-        error "No kernel found in /boot/"
+        fatal "No Fedora kernel found in /boot/"
     else
         say "Detected kernel version: $(pq "$kernel_version")"
         K_MODVER=$kernel_version
@@ -2466,21 +2565,8 @@ do_stage_4_fedora() {
         end_part_lax
     fi
 
-    if do_part 7 "Build live initramfs with dracut"; then
-        say "Building live initramfs with dracut (${kernel_version})"
-
-        # Ensure dracut live modules are installed
-        say "Ensuring dracut-live and dracut-squash are installed"
-        fedora_dnf install dracut-live dracut-squash 2>&1 | tail -5 || true
-
-        # Mount /run tmpfs so dracut doesn't fail on host-only detection
-        mkdir -p /run
-        mount -t tmpfs tmpfs /run 2>/dev/null || true
-
-        # Note: initramfs is rebuilt in Stage 6 with proper /dev/log setup;
-        # this is a best-effort first pass.
-        dracut --force --no-hostonly --add dmsquash-live \
-            /boot/initramfs-live.img "$kernel_version" 2>&1 | tr '\r' '\n' || true
+    if do_part 7 "Install live initramfs modules"; then
+        fedora_dnf install dracut-live dracut-squash || fatal "Could not install Fedora live initramfs modules"
         end_part_lax
     fi
 
@@ -2509,7 +2595,8 @@ do_stage_4_fedora() {
         psay "$cnt" "Install $(pqn %n) RPM package%s"
         for rpm in "${rpms[@]}"; do
             say "install $(pq "${rpm##*/}")"
-            rpm --force -U "$rpm" 2>&1 | tr '\r' '\n' || true
+            rpm --force -U "$rpm" 2>&1 | tr '\r' '\n'
+            (( PIPESTATUS[0] == 0 )) || fatal "Could not install local package: $rpm"
         done
         end_part_lax
     else
@@ -2687,12 +2774,26 @@ do_stage_5() {
     say "Write initrd_release file"
     write_initrd_release "$sqfs_dir" $SUDO
 
+    # dkms signing key: check it, keep mok.pub only when dkms signed modules with it
+    [[ ${DISTRO_FAMILY:-debian} = debian ]] && check_dkms_key
+
     say "Clean out log files and other files"
     : "${sqfs_dir:?"sqfs_dir not set"}"
     [[ "$sqfs_dir" = "/" ]] && fatal "sqfs_dir cannot be /"
-    for f in $(gather delete-files); do
-        $SUDO rm -rf "${sqfs_dir:?}"/"$f" 2>/dev/null
-    done
+    gather delete-files | $SUDO chroot "$sqfs_dir" /bin/bash -c '
+        shopt -s nullglob
+        # Disable word splitting while expanding one pathname pattern per line.
+        IFS=
+        while read -r pattern; do
+            [[ -n $pattern ]] || continue
+            case /$pattern/ in
+                //*|*/../*) exit 1 ;;
+            esac
+            for path in $pattern; do
+                case ${path##*/} in .|..) continue ;; esac
+                rm -rf -- "$path" || exit 1
+            done
+        done' || fatal "Could not clean files from squashfs"
 
     if [[ ${DISTRO_FAMILY:-debian} = debian ]]; then
         $SUDO mkdir -p "$sqfs_dir"/var/log/apt
@@ -2841,6 +2942,11 @@ do_stage_6() {
         leave_stage
         return
     fi
+    local initrd_gz=$iso_dir/antiX/initrd.gz
+    if [[ -n $iso_only && ! ( -f $initrd_gz && -s $initrd_gz ) ]]; then
+        fatal "ISO-only rebuild requires the existing kernel initrd: $initrd_gz"
+    fi
+
     # (0) Populate iso dir with boilerplate files
     # (1) Copy flavour-dependent bootloader.cfg files via inheritance
 
@@ -2994,31 +3100,33 @@ Bootloader_Data
         md5sum_file "$vmlinuz"
     fi
 
-    # Create custom initrd.gz including modules from the squashfs kernel
-    if [[ -e $initrd_dir ]]; then
-        say "Clear out initrd directory"
-        rm -rf "${initrd_dir:?}"
-    fi
-
-    mkdir -p "$initrd_dir"
-
-    local initrd_src=$template/COMMON/initrd
-
-    if [[ -d $initrd_src ]]; then
-        copy_template_dir -u initrd "$initrd_dir"
-    else
-        error "No $initrd_src/ or $initrd_src.gz found"
-    fi
-
-    initrd_busybox "$initrd_dir"
-
-    say "Write initrd_release file"
-    write_initrd_release "$initrd_dir"
-
     say "Write lsb-release"
     update_lsb_release
 
-    if [[ -z $iso_only ]]; then
+    if [[ -n $iso_only ]]; then
+        say "Reuse existing initrd.gz"
+    else
+        # Create custom initrd.gz including modules from the squashfs kernel
+        if [[ -e $initrd_dir ]]; then
+            say "Clear out initrd directory"
+            rm -rf "${initrd_dir:?}"
+        fi
+
+        mkdir -p "$initrd_dir"
+
+        local initrd_src=$template/COMMON/initrd
+
+        if [[ -d $initrd_src ]]; then
+            copy_template_dir -u initrd "$initrd_dir"
+        else
+            error "No $initrd_src/ or $initrd_src.gz found"
+        fi
+
+        initrd_busybox "$initrd_dir"
+
+        say "Write initrd_release file"
+        write_initrd_release "$initrd_dir"
+
         say "Copy $(pq "$K_NAME") modules into initrd"
 
         rm -rf "${initrd_dir:?}/lib/modules/"
@@ -3028,21 +3136,20 @@ Bootloader_Data
 
         #anticap#$tools/copy-initrd-programs --to $initrd_dir --clean
         "$tools"/copy-initrd-programs --encrypt --quiet --to "$initrd_dir" --from "$sqfs_dir"
-    fi
 
-    local initrd_gz=$iso_dir/antiX/initrd.gz
-    say "Create initrd.gz"
-    (cd "$initrd_dir" && find . | cpio -o -H newc --owner root:root --quiet) \
-        | $GZIP -9 > "$initrd_gz"
+        say "Create initrd.gz"
+        (cd "$initrd_dir" && find . | cpio -o -H newc --owner root:root --quiet) \
+            | $GZIP -9 > "$initrd_gz"
 
-    if [[ -z "$no_ucode" ]]; then
-        if command -v uc-tool >/dev/null 2>&1; then
-            say "Inject ucode into initrd.gz"
-            local uc_color=; [[ $color_mode == "off" ]] && uc_color="--no-color"
-            uc-tool $uc_color -u amd,intel -F "$sqfs_dir/lib/firmware" -i "$initrd_gz" \
-                || warn "ucode injection failed -- initrd.gz may lack ucode"
-        else
-            say "uc-tool not found -- skipping ucode injection into initrd.gz"
+        if [[ -z "$no_ucode" ]]; then
+            if command -v uc-tool >/dev/null 2>&1; then
+                say "Inject ucode into initrd.gz"
+                local uc_color=; [[ $color_mode == "off" ]] && uc_color="--no-color"
+                uc-tool $uc_color -u amd,intel -F "$sqfs_dir/lib/firmware" -i "$initrd_gz" \
+                    || warn "ucode injection failed -- initrd.gz may lack ucode"
+            else
+                say "uc-tool not found -- skipping ucode injection into initrd.gz"
+            fi
         fi
     fi
 
@@ -3071,6 +3178,15 @@ Bootloader_Data
     leave_stage
 }
 
+generate_archiso_image() (
+    local conf=$1 kernel=$2 image=$3 tmp
+    tmp=$(mktemp "${image}.XXXXXX") || exit 1
+    trap 'rm -f -- "$tmp"' EXIT
+    set -o pipefail
+    mkinitcpio -c "$conf" -k "$kernel" -g "$tmp" 2>&1 | tr '\r' '\n' || exit 1
+    [[ -s $tmp ]] && chmod 0644 "$tmp" && mv -fT -- "$tmp" "$image"
+)
+
 do_stage_6_arch() {
     require_programs grub-mkrescue
 
@@ -3091,13 +3207,13 @@ do_stage_6_arch() {
     local kimg=$sqfs_dir/boot/${K_BOOT_IMAGE:-vmlinuz-linux}
     local initrd_img=$sqfs_dir/boot/archiso.img
     [[ -e "$kimg" ]] || error "Missing kernel image in squashfs: $(pqw "${kimg#"$sqfs_dir"}")"
-    if ! [[ -r "$initrd_img" ]]; then
+    if ! [[ -s "$initrd_img" ]]; then
         say "Missing $(pq /boot/archiso.img) in squashfs; attempting to build it now"
         prep_chroot
         # shellcheck disable=SC2016
-        $SUDO chroot "$sqfs_dir" /bin/bash -lc '
+        $SUDO chroot "$sqfs_dir" /bin/bash -lc "$(declare -f generate_archiso_image)"'
             set -euo pipefail
-            kpath="/boot/'"${K_BOOT_IMAGE:-vmlinuz-linux}"'"
+            kpath="/boot/$1"
             if ! [[ -r "$kpath" ]]; then
                 kpath="$(ls -1 /boot/vmlinuz-* 2>/dev/null | head -n 1 || true)"
             fi
@@ -3119,11 +3235,10 @@ COMPRESSION="zstd"
 MKINITCPIO
             fi
 
-            mkinitcpio -c "$conf" -k "$kpath" -g /boot/archiso.img
-            chmod 0644 /boot/archiso.img 2>/dev/null || true
-        ' || true
+            generate_archiso_image "$conf" "$kpath" /boot/archiso.img
+        ' bash "${K_BOOT_IMAGE:-vmlinuz-linux}" || fatal "Failed to build /boot/archiso.img"
     fi
-    [[ -e "$initrd_img" ]] || error "Missing archiso initramfs in squashfs: $(pqw "${initrd_img#"$sqfs_dir"}")"
+    [[ -s "$initrd_img" ]] || fatal "Missing archiso initramfs in squashfs: $(pqw "${initrd_img#"$sqfs_dir"}")"
 
     $SUDO cp "$kimg" "$boot_dir/vmlinuz-linux"
     $SUDO cp "$initrd_img" "$boot_dir/archiso.img"
@@ -3184,52 +3299,24 @@ do_stage_6_fedora() {
     say "Copy GRUB theme and configuration for Fedora ISO"
     copy_template_dir -u iso "$iso_dir"
 
-    # Copy kernel and initramfs from squashfs
-    local kernel_ver
-    kernel_ver=$(find "$sqfs_dir"/boot/ -maxdepth 1 -name 'vmlinuz-*' 2>/dev/null | sort | head -n1 | sed 's|.*/vmlinuz-||')
-    if [[ -z $kernel_ver ]]; then
-        error "No kernel found in squashfs /boot/"
-    fi
+    local kernel_ver=${K_MODVER:-}
+    [[ -n $kernel_ver && $kernel_ver != */* ]] || fatal "Missing or invalid Fedora kernel version from Stage 4"
+    local kimg="$sqfs_dir/boot/vmlinuz-$kernel_ver"
+    [[ -s $kimg && -d $sqfs_dir/usr/lib/modules/$kernel_ver ]] || fatal "Missing Fedora kernel or modules for $kernel_ver"
 
-    local kimg=$sqfs_dir/boot/vmlinuz-$kernel_ver
-    local initrd_img=$sqfs_dir/boot/initramfs-live.img
-
-    [[ -e "$kimg" ]] || error "Missing kernel image: $(pqw "vmlinuz-$kernel_ver")"
-
-    # Rebuild initramfs (dracut needs /dev/log which may not exist in the chroot)
-    say "Rebuilding live initramfs..."
+    say "Building live initramfs for $kernel_ver"
     prep_chroot
-    # Write helper scripts for creating /dev/log and building initramfs
-    $SUDO tee "$sqfs_dir/tmp/mkdevlog.py" > /dev/null << 'PYEOF'
-import socket, os
-try:
-    os.unlink("/dev/log")
-except:
-    pass
-s = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-s.bind("/dev/log")
-os.chmod("/dev/log", 0o666)
-PYEOF
-    $SUDO tee "$sqfs_dir/tmp/build-initrd.sh" > /dev/null << 'INITEOF'
-#!/bin/bash
-kver=$(ls /boot/vmlinuz-* 2>/dev/null | head -n1 | sed 's|/boot/vmlinuz-||')
-if [ -L /dev/log ]; then rm -f /dev/log; fi
-python3 /tmp/mkdevlog.py &
-sleep 0.3
-rm -f /boot/initramfs-live.img /tmp/initrd.img
-dracut --force --no-hostonly --add "dmsquash-live" /tmp/initrd.img "$kver" 2>&1
-if [ -f /tmp/initrd.img ] && [ -s /tmp/initrd.img ]; then
-    cp /tmp/initrd.img /boot/initramfs-live.img
-    chmod 644 /boot/initramfs-live.img
-fi
-INITEOF
-    $SUDO chmod +x "$sqfs_dir/tmp/build-initrd.sh"
-    $SUDO chroot "$sqfs_dir" /bin/bash /tmp/build-initrd.sh
-    [[ -s "$sqfs_dir/boot/initramfs-live.img" ]] || error "dracut failed to build initramfs"
+    $SUDO chroot "$sqfs_dir" /bin/bash -es -- "$kernel_ver" <<'Dracut' || fatal "dracut failed for Fedora kernel $kernel_ver"
+tmp=$(mktemp /boot/.initramfs-live.XXXXXXXX)
+trap 'rm -f -- "$tmp"' EXIT
+dracut --force --no-hostonly --add dmsquash-live "$tmp" "$1"
+test -s "$tmp"
+chmod 0644 "$tmp"
+mv -fT -- "$tmp" /boot/initramfs-live.img
+Dracut
 
-    # Copy boot files with archiso-compatible names for unified grub.cfg
-    $SUDO cp "$kimg" "$boot_iso_dir/vmlinuz-linux"
-    $SUDO cp "$initrd_img" "$boot_iso_dir/initramfs-live.img"
+    $SUDO cp "$kimg" "$boot_iso_dir/vmlinuz-linux" || fatal "Could not stage Fedora kernel"
+    $SUDO cp "$sqfs_dir/boot/initramfs-live.img" "$boot_iso_dir/initramfs-live.img" || fatal "Could not stage Fedora initramfs"
 
     # Provide package list (useful for debugging/remaster workflows)
     if [[ -r "$work_dir/package-list.out" ]]; then
@@ -3344,6 +3431,8 @@ do_stage_7() {
         mksquash_opts+=(-e Build)
     else
         linuxfs_file=$iso_dir/antiX/linuxfs
+        # dkms private signing key: stays in the work chroot, not in the ISO
+        mksquash_opts+=(-e var/lib/dkms/mok.key)
     fi
     rm -f "$linuxfs_file"
 
@@ -3364,9 +3453,15 @@ do_stage_7() {
     else
         UNCOMPRESSEDSIZE_FILE="$iso_dir/antiX/linuxfs.info"
     fi
-    $SUDO unbuffer -p mksquashfs "$sqfs_dir" "$linuxfs_file" "${mksquash_opts[@]}" -progress | tee "$output"
+    # Expect's unbuffer loses signal deaths. Let sh turn those into an exit status.
+    $SUDO unbuffer sh -c '"$@"; exit $?' sh \
+        mksquashfs "$sqfs_dir" "$linuxfs_file" "${mksquash_opts[@]}" -progress | tee "$output"
     local mksquashfs_ret=${PIPESTATUS[0]}
-    (( mksquashfs_ret == 0 )) || fatal "mksquashfs failed"
+    if (( mksquashfs_ret != 0 )); then
+        $SUDO rm -f -- "$linuxfs_file"
+        rm -f -- "$output"
+        fatal "mksquashfs failed with status $mksquashfs_ret"
+    fi
     UNCOMPRESSEDSIZE=$(grep "uncompressed filesystem" "$output" | cut -d"(" -f2 | cut -d" " -f1)
     echo "UncompressedSizeKB=$UNCOMPRESSEDSIZE">"$UNCOMPRESSEDSIZE_FILE"
     rm -f "$output"
@@ -3389,6 +3484,11 @@ do_stage_7() {
 #------------------------------------------------------------------------------
 # Stage 8 creates the iso file.
 #------------------------------------------------------------------------------
+remember_built_iso() {
+    [[ -s $1 ]] || fatal "Missing or empty ISO: $1"
+    ln -sfnT -- "$1" "$output_dir/last-built.iso" || fatal "Could not record the mastered ISO path"
+}
+
 do_stage_8() {
 
 	if [[ $stop_8 ]]; then
@@ -3402,6 +3502,22 @@ do_stage_8() {
     local iso_file=$full_distro_name${ISO_SUFFIX:+_$ISO_SUFFIX}.iso
     mkdir -p "$iso_file_dir"
     local full_iso_file=$iso_file_dir/$iso_file
+    # A failed same-name rebuild may leave a partial ISO at the recorded path.
+    if [[ ! -L $output_dir/last-built.iso || $output_dir/last-built.iso -ef $full_iso_file ||
+          $(readlink -- "$output_dir/last-built.iso") == "$full_iso_file" ]]; then
+        rm -f -- "$output_dir/last-built.iso" || fatal "Could not clear the previous ISO record"
+    fi
+    # Signatures of a previous iso would not match the new one (e.g. a
+    # rebuild with --no-sign): remove them, sign_iso_files() makes new ones.
+    # Removing needs a writable directory; else (or if rm fails anyway) sudo.
+    local f
+    for f in "$full_iso_file".sig "$full_iso_file".sha256.asc; do
+        [[ -e $f || -L $f ]] || continue
+        if [[ -w $iso_file_dir ]] && rm -f "$f" 2>/dev/null; then
+            continue
+        fi
+        $SUDO rm -f "$f" || warn "Could not remove the old $(pq "$(basename "$f")")"
+    done
     say "Build the live $(pq "$iso_file") file"
 
     if [[ ${DISTRO_FAMILY:-debian} = arch ]] || [[ ${DISTRO_FAMILY:-debian} = fedora ]]; then
@@ -3481,20 +3597,14 @@ do_stage_8() {
         local mkrescue_result=$?
 
         [[ $mkrescue_result -eq 0 ]] || fatal "grub-mkrescue failed to create $(pq "$full_iso_file")"
+        remember_built_iso "$full_iso_file"
         size=$(du_size "$full_iso_file")
         end_timer "create $(pqn "$size") iso file"
 
         sha256sum_file "$full_iso_file"
         zsyncmake_file "$full_iso_file"
 
-        if [[ $SIGN_FILES == true ]]; then
-            say "Sign $(basename "$full_iso_file")"
-            rm -f "$full_iso_file".sig 2>/dev/null
-            local gpg_sudo
-            is_antiX && gpg_sudo=$SUDO
-            $gpg_sudo gpg --output "$full_iso_file".sig --detach-sign "$full_iso_file"
-            gpg_clearsign_file "$full_iso_file".sha256
-        fi
+        sign_iso_files "$full_iso_file"
 
         say2 "Your live $(pq "$iso_file") is in $(pq Remaster/iso-files) ready to be tested"
 
@@ -3538,18 +3648,12 @@ do_stage_8() {
     size=$(du_size "$full_iso_file")
     end_timer "create $(pqn "$size") iso file"
 
+    remember_built_iso "$full_iso_file"
     #md5sum_file $full_iso_file
     sha256sum_file "$full_iso_file"
     zsyncmake_file "$full_iso_file"
 
-    if [[ $SIGN_FILES == true ]]; then
-        say "Sign $(basename "$full_iso_file")"
-        rm -f "$full_iso_file".sig 2>/dev/null
-        local gpg_sudo
-        is_antiX && gpg_sudo=$SUDO
-        $gpg_sudo gpg --output "$full_iso_file".sig --detach-sign "$full_iso_file"
-        gpg_clearsign_file "$full_iso_file".sha256
-    fi
+    sign_iso_files "$full_iso_file"
 
 
     if is_antiX && [[ -L "$ISO_SYMLINK" ]];then
@@ -3596,7 +3700,11 @@ do_stage_9() {
         [[ -L $script_dir/$s ]] && links+=("$script_dir/$s")
     done
 
+    umount_chroot
     umount_tmpfs
+    if mountpoint -q "$sqfs_dir"; then
+        vexit "Keeping the mounted squashfs directory"
+    fi
     clear_outputs
 
     local rel_work_dir
@@ -3669,11 +3777,15 @@ enter_stage() {
 }
 
 leave_stage() {
-    touch "$output_file"
-    (( $# > 0 )) && return
-    _end_timer_ STAGE_TIME "Stage $stage"
-    check_errors_strict
-    return 0
+    if (( $# == 0 )); then
+        _end_timer_ STAGE_TIME "Stage $stage"
+        check_errors_strict
+    fi
+    if [[ -n $chroot_marker ]]; then
+        mv -fT -- "$output_file" "$chroot_marker" || fatal "Could not publish chroot stage data"
+    else
+        touch "$output_file" || fatal "Could not publish stage marker"
+    fi
 }
 #==============================================================================
 # Routines for tmpfs mounts
@@ -3743,12 +3855,12 @@ umount_tmpfs() {
     YES_no_loud "Clear out $name/ and umount it" || return 1
 
     check_sqfs_dir "$dir"
-    $SUDO rm -rf "$(dirname "${dir:?}")"/squashfs/*
     $SUDO umount "$dir"
-    mountpoint -q "$dir" || return
-    warn "name did not simply umount. Trying -l (lazy option)"
+    mountpoint -q "$dir" || return 0
+    warn "$name did not simply umount. Trying -l (lazy option)"
     $SUDO umount -l "$dir"
-    mountpoint -q "$dir" || error "Could not umount $name"
+    mountpoint -q "$dir" && fatal "Could not umount $name"
+    return 0
 
 }
 
@@ -3777,6 +3889,7 @@ check_all_tmpfs() {
 
     YES_no "Cache or umount any of these" || return 0
 
+    umount_chroot
     for name in $all_tmpfs; do
         echo
         local dir=$remaster_dir/work/$name/squashfs
@@ -3784,8 +3897,7 @@ check_all_tmpfs() {
         YES_no_loud "Cache chroot directory before umount" && force_cache chroot "$name" "$dir"
         YES_no "Clear and umount this directory" || continue
 
-        $SUDO rm -rf "$(dirname "${dir:?}")"/squashfs/*
-        $SUDO umount -l "$dir"
+        $SUDO umount -l "$dir" || fatal "Could not umount $dir"
     done
 
     return 0
@@ -4551,14 +4663,102 @@ make_uefi_iso() {
     isohybrid --uefi "$file" || fatal "isohybrid failed for $(pq "$file")"
 }
 
-# isolinux's hybrid MBR boot code (package isolinux / syslinux)
-find_isohdpfx() {
+#------------------------------------------------------------------------------
+# dkms MOK signing key for the modules built in the chroot (Debian builds).
+# Created before stage 4 on the host (openssl may not be in the chroot yet),
+# limited to module signing (extendedKeyUsage 1.3.6.1.4.1.2312.16.1.2); dkms
+# then uses it instead of making its own. The private key stays in the work
+# chroot (update builds reuse the pair) and is left out of the squashfs;
+# mok.pub stays for the prebuilt modules. Reuse an existing pair only if its
+# certificate has the module-signing OID.
+#------------------------------------------------------------------------------
+harden_dkms_key() {
+    local dir=$sqfs_dir/var/lib/dkms conf tmp usage
+    local module_signing_oid=1.3.6.1.4.1.2312.16.1.2
+    if [[ -f $dir/mok.key && -f $dir/mok.pub ]]; then
+        usage=$(openssl x509 -inform DER -in "$dir/mok.pub" -noout -ext extendedKeyUsage) \
+            || fatal "Could not check the existing dkms certificate with openssl. Check openssl on the host and start with a fresh work tree."
+        [[ $usage =~ (^|[[:space:],])"$module_signing_oid"([[:space:],]|$) ]] \
+            || fatal "The existing dkms certificate lacks the module-signing OID. Start with a fresh work tree."
+        return 0
+    fi
+    for conf in "$sqfs_dir"/etc/dkms/framework.conf "$sqfs_dir"/etc/dkms/framework.conf.d/*.conf; do
+        [[ -r $conf ]] && grep -Eq '^[[:space:]]*(mok_signing_key|mok_certificate)=' "$conf" && return 0
+    done
+    if ! command -v openssl >/dev/null; then
+        warn "openssl not found on the host: dkms in the chroot makes its own (not hardened) signing key"
+        return 0
+    fi
+    tmp=$(mktemp -d) || fatal "Could not create a temporary directory"
+    ( umask 077
+      openssl req -new -x509 -nodes -days 36500 -subj "/CN=DKMS module signing key" \
+          -newkey rsa:2048 -keyout "$tmp/mok.key" \
+          -addext "extendedKeyUsage=codeSigning,$module_signing_oid" \
+          -outform DER -out "$tmp/mok.pub" >/dev/null 2>&1 ) \
+        || { rm -rf -- "$tmp"; fatal "Could not create the dkms signing key"; }
+    $SUDO install -d -m 0755 "$dir" \
+        && $SUDO install -m 0600 -o root -g root "$tmp/mok.key" "$dir/mok.key" \
+        && $SUDO install -m 0644 -o root -g root "$tmp/mok.pub" "$dir/mok.pub" \
+        || { rm -rf -- "$tmp"; fatal "Could not install the dkms signing key into the chroot"; }
+    rm -rf -- "$tmp"
+    say "Created the dkms signing key (module signing only) in the chroot"
+}
+
+#------------------------------------------------------------------------------
+# Before the squashfs (Debian builds):
+# - a signing key set in /etc/dkms/framework.conf(.d) must not be inside the
+#   chroot (only /var/lib/dkms/mok.key is left out of the squashfs)
+# - the signed dkms modules must match mok.pub
+# - no signed dkms module (e.g. a kernel without module signing): remove the
+#   unused pair
+#------------------------------------------------------------------------------
+check_dkms_key() {
+    local dir=$sqfs_dir/var/lib/dkms conf key='' line m k serial='' signed=''
+    for conf in "$sqfs_dir"/etc/dkms/framework.conf "$sqfs_dir"/etc/dkms/framework.conf.d/*.conf; do
+        [[ -r $conf ]] || continue
+        line=$(sed -nE 's/^[[:space:]]*(export[[:space:]]+)?mok_signing_key=//p' "$conf" | tail -n 1)
+        [[ -n $line ]] || continue
+        line=${line%%#*}; line=${line%"${line##*[![:space:]]}"}
+        line=${line#[\"\']}; key=${line%[\"\']}
+    done
+    if [[ -n $key && $key != pkcs11:* && $key != /var/lib/dkms/mok.key ]]; then
+        [[ -e $sqfs_dir/${key#/} ]] && fatal "The dkms signing key $key (set in /etc/dkms/framework.conf*) is inside the chroot and would be in the squashfs"
+    fi
+
+    [[ -f $dir/mok.pub ]] || return 0
+    command -v modinfo >/dev/null || return 0
+    if command -v openssl >/dev/null; then
+        serial=$(openssl x509 -inform DER -in "$dir/mok.pub" -noout -serial 2>/dev/null)
+        serial=${serial#serial=}; serial=${serial^^}
+        while [[ $serial == 0?* ]]; do serial=${serial#0}; done
+    fi
+    for m in "$sqfs_dir"/usr/lib/modules/*/updates/dkms/*.ko*; do
+        [[ -f $m ]] || continue
+        k=$(modinfo -F sig_key "$m" 2>/dev/null) || k=
+        [[ -n $k ]] || continue
+        signed=1
+        k=${k//:/}; k=${k^^}
+        while [[ $k == 0?* ]]; do k=${k#0}; done
+        [[ -z $serial || $k == "$serial" ]] \
+            || fatal "dkms module ${m##*/} is not signed with /var/lib/dkms/mok.pub (start with a fresh chroot)"
+    done
+    [[ -n $signed ]] && return 0
+    $SUDO rm -f -- "$dir/mok.pub" "$dir/mok.key" || fatal "Could not remove the unused dkms signing key"
+    say "No signed dkms modules: removed the unused dkms signing key"
+}
+
+# Check the host's ISOLINUX MBR and optionally store its path in the named variable.
+require_isohdpfx() {
     local f
     for f in /usr/lib/ISOLINUX/isohdpfx.bin /usr/lib/syslinux/bios/isohdpfx.bin \
              /usr/lib/syslinux/isohdpfx.bin /usr/share/syslinux/isohdpfx.bin; do
-        [[ -f $f ]] && { echo "$f"; return 0; }
+        [[ -f $f && -r $f && -s $f ]] || continue
+        if [[ -n ${1:-} ]]; then
+            printf -v "$1" '%s' "$f"
+        fi
+        return 0
     done
-    return 1
+    fatal "Missing or unreadable isohdpfx.bin. Install it on the build host with: sudo apt install isolinux"
 }
 
 #------------------------------------------------------------------------------
@@ -4628,7 +4828,7 @@ make_xorriso_iso() {
                                                  # eltorito.img and the MBR code
         )
     else
-        mbr=$(find_isohdpfx) || error "isohdpfx.bin not found (package isolinux)"
+        require_isohdpfx mbr
         cmd+=(
             -boot_image isolinux system_area="$mbr"
                                                  # MBR boot code -> BIOS from USB
@@ -5162,7 +5362,10 @@ copy_theme_dir() {
     local b_theme_dir
     b_theme_dir=$b_dir/"$(basename "$theme_dir")"
     mkdir -p "$b_theme_dir"/"$THEME"
-    cp -a "$t_dir"/* "$b_theme_dir"/"$THEME"/
+    local copy_opts=-a
+    # Arch Xfce shares its top-level misc and extra directories with mx.
+    [[ $THEME == archxfce ]] && copy_opts=-aH
+    cp "$copy_opts" "$t_dir"/* "$b_theme_dir"/"$THEME"/ || fatal "Could not stage theme $THEME"
     cp -a "$theme_dir"/*.sh "$b_theme_dir"/
 }
 
@@ -5173,15 +5376,26 @@ copy_theme_dir() {
 # four times before giving up. If any such mountpoint is still a mountpoint
 # after four attempts to umount it then we error out at the end of the routine.
 #------------------------------------------------------------------------------
+read_chroot_mounts() {
+    local -n result=$1
+    local mp encoded
+    result=()
+    [[ -r /proc/self/mountinfo ]] || fatal "Cannot inspect chroot mounts"
+    while read -r _ _ _ _ encoded _; do
+        printf -v mp '%b' "$encoded"
+        [[ $mp == "$remaster_dir"/work/*/squashfs/* ]] || continue
+        result+=("$mp")
+    done < /proc/self/mountinfo
+}
+
 umount_chroot() {
-    # Pretend mode must not touch mounts.
     [[ -n $pretend_mode ]] && return 0
+    local mp name
+    local -a mounts
+    read_chroot_mounts mounts
+    for mp in "${mounts[@]}"; do
+        name=${err_co}chroot:$bold_co${mp##"$remaster_dir"/*/squashfs}
 
-    for mp in $(mount | cut -d" " -f3 | grep "^$remaster_dir/work/.*/squashfs/"); do
-        local name=${err_co}chroot:$bold_co${mp##"$remaster_dir"/*/squashfs}
-
-        # Don't umount the tmpfs
-        [[ $mp == "$sqfs_dir" ]] && continue
 
         $SUDO umount -l "$mp" 2>/dev/null
 
@@ -5195,10 +5409,13 @@ umount_chroot() {
 
         mountpoint -q "$mp" || continue
         warn "Still could not umount $name"
-        UMOUNT_ERRORS=true
     done
 
-    [[ -n $UMOUNT_ERRORS ]] && fatal "Umount errors!"
+    read_chroot_mounts mounts
+    if (( ${#mounts[@]} )); then
+        UMOUNT_ERRORS=true
+        fatal "Still mounted in chroot: ${mounts[*]}"
+    fi
 }
 
 #------------------------------------------------------------------------------
@@ -5414,15 +5631,19 @@ _cache_() {
         say "Found cache $(pq "$name"$ext)"
         YES_no "Restore from this cache" || return 1
 
-        if [[ -d "$dir" && "$(find "$dir" -mindepth 1 -maxdepth 1 -print -quit 2>/dev/null)" ]]; then
-            say "Clear out existing files"
-            find "$dir" -mindepth 1 -delete
-        fi
-        mkdir -p "$dir"
+        mkdir -p "$dir" || fatal "Could not create cache restore directory: $dir"
+        $SUDO find "$dir" -mindepth 1 -delete || fatal "Could not clear $dir for restore"
 
         say "Restore $(pq "$type" "$subtype") from cache"
         start_timer
-        (cd "$dir" && gunzip -c "$file" | $SUDO cpio -idum --quiet)
+        if ! (set -o pipefail; cd "$dir" && gunzip -c "$file" | $SUDO cpio -idum --quiet); then
+            $SUDO find "$dir" -mindepth 1 -delete || fatal "Could not clear partial restore in $dir"
+            local failed_file
+            failed_file=$(mktemp "$file.failed.XXXXXXXX") && mv -fT -- "$file" "$failed_file" \
+                || fatal "Could not set aside failed cache $file"
+            warn "Restore failed. Saved archive at $failed_file"
+            return 1
+        fi
         end_timer "Restore cache"
         say "Restored $(pqn "$(du_size "$dir")") bytes of data"
         ;;
@@ -5444,8 +5665,21 @@ _cache_() {
         $SUDO echo >/dev/null
         start_timer
 
-        (cd "$dir" && $SUDO find . -depth | grep -vE "$cache_exclude" \
-            | $SUDO cpio -oa -H newc --quiet | $GZIP -3) > "$file"
+        (
+            set -o pipefail
+            local tmp
+            tmp=$(mktemp "$file.partial.XXXXXXXX") || exit 1
+            trap 'rm -f -- "$tmp"' EXIT
+            cd "$dir" || exit 1
+            $SUDO find . -depth | grep -vE "$cache_exclude" \
+                | $SUDO cpio -oa -H newc --quiet | $GZIP -3 > "$tmp" || exit 1
+            if [[ -e $file ]]; then
+                chmod --reference="$file" -- "$tmp" || exit 1
+            else
+                chmod '=rw' -- "$tmp" || exit 1
+            fi
+            mv -fT -- "$tmp" "$file"
+        ) || fatal "Could not create cache $file"
 
         end_timer "Create cache"
         ;;
@@ -5776,6 +6010,10 @@ load_defaults() {
         # shellcheck disable=SC1090
         source "$file"
     done
+    # command line overrides the defaults files
+    [[ -n $sign_key_opt ]] && SIGN_KEY=$sign_key_opt
+    [[ -n $no_sign      ]] && SIGN_FILES=
+    return 0
 }
 
 pick_prog() {
@@ -5867,7 +6105,7 @@ clear_outputs() {
 
 my_exit() {
     local ret=${1:-0}
-    echo "$ret" > "$exit_file"
+    [[ -z $exit_file ]] || echo "$ret" > "$exit_file"
     exit "$ret"
 }
 
@@ -5990,15 +6228,17 @@ pretty_output() {
 # window title if it was set.
 #------------------------------------------------------------------------------
 on_exit() {
-    if [[ -z $UMOUNT_ERRORS ]]; then
-        umount_chroot
-    else
-        # umount_chroot already ran and hit errors; best-effort lazy sweep
-        # to avoid leaving stale mounts behind
-        for mp in $(mount | cut -d" " -f3 | grep "^$remaster_dir/work/.*/squashfs/"); do
-            [[ $mp == "$sqfs_dir" ]] && continue
-            $SUDO umount -l "$mp" 2>/dev/null || true
-        done
+    if [[ -z $sign_only ]]; then
+        if [[ -z $UMOUNT_ERRORS ]]; then
+            umount_chroot
+        else
+            # umount_chroot already ran and hit errors; best-effort lazy sweep
+            # to avoid leaving stale mounts behind
+            for mp in $(mount | cut -d" " -f3 | grep "^$remaster_dir/work/.*/squashfs/"); do
+                [[ $mp == "$sqfs_dir" ]] && continue
+                $SUDO umount -l "$mp" 2>/dev/null || true
+            done
+        fi
     fi
 
     [[ -n $ORIG_TCP_SYN_RETRIES ]] \
@@ -6613,13 +6853,138 @@ sha256sum_file() {
     (cd "$dir" && sha256sum "$file" > "$file".sha256)
 }
 
+# Sign with gpg, writing gpg's output to file $1.  Builder settings
+# (defaults-local), independent of the kind of ISO being built:
+#  SIGN_AS   user whose keyring signs.  Empty: the user who started
+#            build-iso, so "sudo ./build-iso" signs as $SUDO_USER (root
+#            normally has no key), a normal-user run as that user, and a
+#            root login as root.  SIGN_AS="root": root's keyring.
+#  SIGN_KEY  key in that keyring (fingerprint or long key ID).  Empty:
+#            gpg's default key of that user.
+#  SIGN_PINENTRY  how gpg asks for the passphrase.  Empty/"auto": the
+#            desktop dialog (gpg-agent's pinentry) if a desktop is reachable
+#            (DISPLAY or WAYLAND_DISPLAY set, not an ssh session), else in
+#            the terminal.  "terminal": always in the terminal.  "gui":
+#            always the agent's pinentry.
+# gpg writes to stdout and this shell writes the file, so a root-owned
+# iso-files directory needs no permission changes.  gpg's messages are
+# captured (not stderr, so no STRICT error): on failure they are printed
+# to stdout for sign_iso_files() and no output file is left behind.
+sign_as_user() { echo "${SIGN_AS:-${SUDO_USER:-$(id -un)}}"; }
+
+sign_tty() {   # the terminal, or nothing ("tty" prints "not a tty" otherwise)
+    local t=$GPG_TTY
+    [[ -n $t ]] || t=$(tty 2>/dev/null) || return 0
+    echo "$t"
+}
+
+# How gpg asks for the passphrase, in the order to try:
+# "loopback": gpg asks in the terminal itself; "pinentry": the agent's
+# pinentry (a desktop dialog, or its own terminal fallback).  The agent
+# caches the passphrase either way.  If the agent forbids loopback
+# (no-allow-loopback-pinentry), gpg_sign_to tries once more with pinentry.
+sign_modes() {
+    [[ -n $(sign_tty) ]] || { echo "pinentry"; return; }
+    case ${SIGN_PINENTRY:-auto} in
+        gui)      echo "pinentry" ;;
+        terminal) echo "loopback pinentry" ;;
+        *)        if [[ -n $DISPLAY$WAYLAND_DISPLAY && -z $SSH_CONNECTION$SSH_TTY ]]; then
+                      echo "pinentry"
+                  else
+                      echo "loopback pinentry"
+                  fi ;;
+    esac
+}
+
+# Put the signature from temp file $1 in place as $2, owned like the file it
+# signs ($3).  If the directory is not writable for us (e.g. root-owned
+# iso-files in a normal-user run), use sudo for that.  Messages to stdout.
+sign_put() {
+    local tmp=$1  out=$2  ref=$3  run=()
+    [[ -w $(dirname "$out") ]] || run=(sudo)
+    {   "${run[@]}" rm -f "$out" \
+        && "${run[@]}" install -m 0644 "$tmp" "$out" \
+        && if (( UID == 0 )) || (( ${#run[@]} )); then
+               "${run[@]}" chown --reference="$ref" "$out"
+           fi
+    } 2>&1
+}
+
+gpg_sign_to() {
+    local out=$1  as  cmd  msg  mode  v  envs=()  tty  tmp
+    shift
+    as=$(sign_as_user)
+    tty=$(sign_tty)
+    # pass the terminal and the desktop on to gpg (sudo -u drops them)
+    for v in GPG_TTY DISPLAY WAYLAND_DISPLAY XAUTHORITY; do
+        [[ $v == GPG_TTY ]] && { [[ -n $tty ]] && envs+=("GPG_TTY=$tty"); continue; }
+        [[ -n ${!v} ]] && envs+=("$v=${!v}")
+    done
+    tmp=$(mktemp) || return 1
+    for mode in $(sign_modes); do
+        cmd=(env "${envs[@]}" gpg)
+        [[ $mode == loopback ]] && cmd+=(--pinentry-mode loopback)
+        [[ -n $SIGN_KEY ]] && cmd+=(--local-user "$SIGN_KEY")
+        cmd+=(--output - "$@")
+        [[ $as != "$(id -un)" ]] && cmd=(sudo -H -u "$as" "${cmd[@]}")
+        if msg=$("${cmd[@]}" 2>&1 > "$tmp"); then
+            msg=$(sign_put "$tmp" "$out" "${!#}") && { rm -f "$tmp"; return 0; }
+            msg="cannot write $out"$'\n'"$msg"
+            break
+        fi
+        [[ $mode == loopback && $msg == *"pinentry mode 'loopback' failed"* ]] || break
+    done
+    rm -f "$tmp"
+    echo "$msg"
+    return 1
+}
+
 gpg_clearsign_file() {
-    local dir file gpg_sudo
+    local dir file
     dir=$(dirname "$1")
     file=$(basename "$1")
-    is_antiX && gpg_sudo=$SUDO
-    (cd "$dir" && rm -f "$file".asc 2>/dev/null
-        $gpg_sudo gpg --clearsign --output "$file".asc "$file")
+    (cd "$dir" && gpg_sign_to "$file".asc --clearsign "$file")
+}
+
+# Sign the iso (.sig) and its checksum file (.sha256.asc) if SIGN_FILES is
+# true.  A failure is a warning with the likely reason, not an error: the
+# ISO itself is complete.
+sign_iso_files() {
+    local iso=$1  msg  why  as  key
+    if [[ $SIGN_FILES != true ]]; then
+        [[ -n $no_sign ]] && say "Not signed (--no-sign); sign it later with --sign-only"
+        return 0
+    fi
+    as=$(sign_as_user)
+    key=${SIGN_KEY:-the default key}
+    say "Sign $(basename "$iso")"
+    # gpg's own terminal prompt is just "Enter passphrase:"; under sudo it
+    # could be taken for the sudo password
+    [[ $(sign_modes) == loopback* ]] \
+        && yell "  gpg asks for the passphrase of $key of user $as (not the sudo password), if not cached"
+    msg=$(gpg_sign_to "$iso".sig --detach-sign "$iso") \
+        && msg=$(gpg_clearsign_file "$iso".sha256) && return 0
+
+    local hint="Set SIGN_AS / SIGN_KEY in Input/defaults-local, or SIGN_FILES=\"\" to skip signing."
+    case $msg in
+        "cannot write "*)         why="could not write the signature files to $(dirname "$iso")"
+                                  hint="Make that directory writable (or run with sudo), then: --sign-only" ;;
+        *"sudo: "*)               why="could not run gpg as user $as (SIGN_AS)" ;;
+        *"skipped \""*)           why="key $SIGN_KEY (SIGN_KEY) not found in the gpg keyring of $as" ;;
+        *"no default secret key"*) why="no usable secret key in the gpg keyring of $as (none, or expired)" ;;
+        *"Bad passphrase"*)       why="wrong passphrase for $key of $as" ;;
+        *"Operation cancelled"*|*"Inappropriate ioctl"*|*"No pinentry"*|*"No passphrase given"*)
+                                  why="passphrase for $key of $as not entered (cancelled, or no terminal/pinentry to ask)" ;;
+        *)                        why="gpg failed as user $as" ;;
+    esac
+    local run=()
+    [[ -w $(dirname "$iso") ]] || run=(sudo)
+    "${run[@]}" rm -f "$iso".sig "$iso".sha256.asc 2>/dev/null \
+        || warn "Could not remove old signatures for $(pqw "$iso")"
+    warn "$(basename "$iso") is NOT signed: $why"
+    grep -vE 'keybox .* created|directory .* created' <<<"$msg" | sed 's/^/    /'
+    say "    $hint"
+    return 0
 }
 
 zsyncmake_file() {

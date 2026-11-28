@@ -149,3 +149,4 @@ tsplash_on() {
 }
 
 main "$@" 2>&1 | tee -a $INIT_LOG_FILE
+
